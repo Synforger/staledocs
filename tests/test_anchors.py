@@ -158,3 +158,53 @@ def test_path_roots_with_glob_tokens(tmp_path: Path):
         files, anchors.dirs_of(files), path_roots=["src"],
     )
     assert findings == []
+
+
+def test_gitignored_path_anchor_passes(tmp_path: Path):
+    found = anchors.extract("d.md", "Logs land in `logs/backend.log` locally.\n", RULE)
+    ignored = lambda cands: {c for c in cands if c.startswith("logs/")}  # noqa: E731
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        set(), set(), check_ignored=ignored,
+    )
+    assert findings == []
+
+
+def test_unignored_missing_path_still_flags(tmp_path: Path):
+    found = anchors.extract("d.md", "See `src/gone.py` here.\n", RULE)
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        set(), set(), check_ignored=lambda c: set(),
+    )
+    assert [f.token for f in findings] == ["src/gone.py"]
+
+
+def test_path_symbol_anchor(tmp_path: Path):
+    (tmp_path / "mod.py").write_text("_DENY_RE = 1\n", encoding="utf-8")
+    text = "Guard lives at `mod.py::_DENY_RE` and `mod.py::GONE_SYMBOL`.\n"
+    found = anchors.extract("d.md", text, RULE)
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        {"mod.py"}, set(),
+    )
+    assert [f.token for f in findings] == ["mod.py::GONE_SYMBOL"]
+
+
+def test_slashless_glob_matches_basenames(tmp_path: Path):
+    found = anchors.extract("d.md", "Sharpen a `detect-*` script.\n", RULE)
+    files = {"src/.tooling/detect-stale.sh"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files),
+    )
+    assert findings == []
+
+
+def test_digit_heavy_and_art_tokens_skipped():
+    text = "Shows `7d:53%` and `ctx:███░░░░░35%` and `5h:24%(3h22m)`.\n"
+    assert _tokens(text) == []
+
+
+def test_shell_var_tokens_skipped():
+    text = "Word list at `$HOME/.config/anon-words/master.txt`.\n"
+    assert _tokens(text) == []
