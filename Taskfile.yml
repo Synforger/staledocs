@@ -28,9 +28,10 @@ tasks:
   # same verbs regardless of language.
   # ---------------------------------------------------------------------------
   setup:
-    desc: Initial setup (stub — fill in your stack's dependency install)
+    desc: Create the venv and install staledocs editable with dev extras
     cmds:
-      - echo "task setup is a stub — define your stack's install command here or in Taskfile.local.yml"
+      - python3 -m venv .venv
+      - .venv/bin/pip install -e '.[dev]'
 
   update:
     desc: Update dependencies (stub)
@@ -38,14 +39,14 @@ tasks:
       - echo "task update is a stub — define your stack's update command"
 
   lint:
-    desc: Run lint (stub)
+    desc: Run ruff over src and tests
     cmds:
-      - echo "task lint is a stub — define your stack's linter"
+      - .venv/bin/ruff check src/ tests/
 
   test:unit:
-    desc: Run unit tests (stub)
+    desc: Run the pytest suite (real git fixtures, no mocks in the core path)
     cmds:
-      - echo "task test:unit is a stub — define your stack's unit test command"
+      - .venv/bin/pytest
 
   test:integration:
     desc: Run integration tests (stub)
@@ -53,14 +54,15 @@ tasks:
       - echo "task test:integration is a stub — define your stack's integration test command"
 
   build:
-    desc: Build artefacts (stub)
+    desc: Build the sdist and wheel
     cmds:
-      - echo "task build is a stub — define your stack's build command"
+      - .venv/bin/pip install --quiet build
+      - .venv/bin/python -m build
 
   run:
-    desc: Run the application (stub)
+    desc: Show the CLI entry point
     cmds:
-      - echo "task run is a stub — define your stack's run command"
+      - .venv/bin/staledocs --help
 
   # ---------------------------------------------------------------------------
   # Language-neutral quality gates (no delegation).
