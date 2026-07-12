@@ -20,6 +20,7 @@
 | `anchors.min_length` | int | `3` | shortest token considered an anchor |
 | `anchors.ignore` | strings | `[]` | exact tokens to skip |
 | `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks |
+| `anchors.path_roots` | paths | `[]` | extra prefixes tried when resolving doc-quoted paths (docs describing a deployed subtree, e.g. `[src]`) |
 
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.

@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-12T18:29:57+00:00",
+    "at": "2026-07-12T20:00:54+00:00",
     "code_blobs": {
       "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
-      "src/staledocs/config.py": "61876e19e37769cbf437df64f2dfdd3cc612c7b2"
+      "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3"
     },
-    "commit": "03de2fd736bc9e49d81abe88cf03a270a7b0e277",
+    "commit": "fd9a25c9fee4db38b9e82a80cd1b1301d1c4cd79",
     "doc_blob": "5257fd2c551581e185ab988a2e126b019b05eb3e",
-    "note": ""
+    "note": "path_roots feature follow-through"
   },
   "doc": "docs/setup/README.md",
   "schema": 1

@@ -41,6 +41,7 @@ class AnchorRule:
     min_length: int = 3
     ignore: list[str] = field(default_factory=list)
     include_fenced: bool = False
+    path_roots: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -145,6 +146,7 @@ def load(repo_root: Path) -> Config:
         min_length=min_length,
         ignore=_str_list(anchors_raw.get("ignore"), "anchors.ignore"),
         include_fenced=bool(anchors_raw.get("include_fenced", False)),
+        path_roots=_str_list(anchors_raw.get("path_roots"), "anchors.path_roots"),
     )
 
     return cfg
@@ -191,4 +193,5 @@ anchors:
   min_length: 3
   ignore: []
   include_fenced: false
+  path_roots: []   # extra prefixes for resolving doc-quoted paths (e.g. [src])
 """

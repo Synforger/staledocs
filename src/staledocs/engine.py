@@ -223,7 +223,14 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         pair_index = CodeIndex(repo_root, pair_files) if pair_files is not None else None
         result.anchor_findings.extend(
             anchors_mod.verify(
-                repo_root, doc, found, pair_index, repo_index, tracked, all_dirs
+                repo_root,
+                doc,
+                found,
+                pair_index,
+                repo_index,
+                tracked,
+                all_dirs,
+                cfg.anchors.path_roots,
             )
         )
 
@@ -242,7 +249,14 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         if found:
             result.anchor_findings.extend(
                 anchors_mod.verify(
-                    repo_root, doc, found, None, repo_index, tracked, all_dirs
+                    repo_root,
+                    doc,
+                    found,
+                    None,
+                    repo_index,
+                    tracked,
+                    all_dirs,
+                    cfg.anchors.path_roots,
                 )
             )
 

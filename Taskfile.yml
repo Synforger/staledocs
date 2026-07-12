@@ -86,12 +86,19 @@ tasks:
       - task: lint
       - task: test:unit
       - task: docs:check
+      - task: docs:coherence
       - task: lint:versions
 
   publish:check:
     desc: Pre-publication gate for flipping a repo private -> public (full-history audits + OSS surface checks)
     cmds:
       - bash .tooling/local-ci/publish-check.sh
+
+  docs:coherence:
+    desc: Code<->docs drift gate — dogfooding the tool on itself (strict)
+    deps: [_venv]
+    cmds:
+      - .venv/bin/staledocs check
 
   docs:check:
     desc: Verify docs freshness (paths / task names / tree diagrams vs reality)
