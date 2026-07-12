@@ -1,8 +1,8 @@
 {
   "ack": {
-    "at": "2026-07-12T18:29:57+00:00",
+    "at": "2026-07-12T19:03:51+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "93a8d67237a22559c807e4f5ee8fc86b3047de9f",
+      "src/staledocs/__init__.py": "d46a5abccb838ca9c86f0a4e3bd4444ab48b1e6b",
       "src/staledocs/anchors.py": "aec9182db2d88ffbcf2f82df57b077aa39ce2436",
       "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
       "src/staledocs/config.py": "61876e19e37769cbf437df64f2dfdd3cc612c7b2",
@@ -13,9 +13,9 @@
       "src/staledocs/mapping.py": "73a6cdae305c610708eadba0614f59b8f8e9961c",
       "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
     },
-    "commit": "03de2fd736bc9e49d81abe88cf03a270a7b0e277",
-    "doc_blob": "6016d65fd2737c17f097e679df1666951be42124",
-    "note": ""
+    "commit": "bee2cac45784b769948f8eba9347300348f87331",
+    "doc_blob": "5d3eec1e2b358483ce222dcb0315560e41c0f7da",
+    "note": "version bump follow-through"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
