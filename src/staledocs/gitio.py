@@ -1,0 +1,153 @@
+"""Thin git plumbing layer.
+
+Everything staledocs knows about change comes from git: blob hashes for
+"did this file move since the ack", commit topology for "did the code and
+the doc move together", and trailers for in-commit acks. No wall-clock, no
+mtime — fingerprints only.
+"""
+
+from __future__ import annotations
+
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+ACK_TRAILER = "Staledocs-Ack"
+
+
+class GitError(Exception):
+    """Raised when a git invocation fails or the cwd is not a repository."""
+
+
+def _run(repo_root: Path, *args: str, check: bool = True) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        capture_output=True,
+        text=True,
+    )
+    if check and proc.returncode != 0:
+        raise GitError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
+    return proc.stdout
+
+
+def find_repo_root(start: Path) -> Path:
+    out = _run(start, "rev-parse", "--show-toplevel", check=False).strip()
+    if not out:
+        raise GitError("not inside a git repository")
+    return Path(out)
+
+
+def head_commit(repo_root: Path) -> str | None:
+    """Current HEAD sha, or None on a repo with no commits yet."""
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()
+
+
+def ls_files(repo_root: Path) -> list[str]:
+    """Tracked files plus untracked-but-not-ignored files (POSIX relative)."""
+    out = _run(
+        repo_root,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+    )
+    return [line for line in out.splitlines() if line.strip()]
+
+
+def hash_object(repo_root: Path, rel_path: str) -> str | None:
+    """Blob sha of the working-tree content, or None when the file is gone."""
+    abs_path = repo_root / rel_path
+    if not abs_path.is_file():
+        return None
+    out = _run(repo_root, "hash-object", "--", rel_path)
+    return out.strip()
+
+
+def commit_exists(repo_root: Path, sha: str) -> bool:
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "-e", f"{sha}^{{commit}}"],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0
+
+
+@dataclass
+class Commit:
+    sha: str
+    files: set[str]
+    trailer_acks: set[str]
+
+
+WORKTREE = "WORKTREE"
+
+
+def commits_since(repo_root: Path, since_sha: str) -> list[Commit]:
+    """Commits after `since_sha` up to HEAD (oldest first), with touched files
+    and any `Staledocs-Ack:` trailer values.
+
+    A pseudo-commit `WORKTREE` is appended last, carrying uncommitted changes
+    (staged + unstaged + untracked) so the co-movement rule treats "edited
+    both, not committed yet" the same as "committed both together".
+    """
+    commits: list[Commit] = []
+    out = _run(
+        repo_root,
+        "log",
+        "--reverse",
+        "--name-only",
+        f"--format=%x01%H%x02%(trailers:key={ACK_TRAILER},valueonly=true,separator=%x03)",
+        f"{since_sha}..HEAD",
+    )
+    current: Commit | None = None
+    for line in out.splitlines():
+        if line.startswith("\x01"):
+            body = line[1:]
+            sha, _, trailers = body.partition("\x02")
+            acks = {t.strip() for t in trailers.split("\x03") if t.strip()}
+            current = Commit(sha=sha, files=set(), trailer_acks=acks)
+            commits.append(current)
+        elif line.strip() and current is not None:
+            current.files.add(line.strip())
+
+    dirty = worktree_dirty_files(repo_root)
+    if dirty:
+        commits.append(Commit(sha=WORKTREE, files=dirty, trailer_acks=set()))
+    return commits
+
+
+def worktree_dirty_files(repo_root: Path) -> set[str]:
+    """Files that differ from HEAD (staged, unstaged, or untracked)."""
+    out = _run(repo_root, "status", "--porcelain", "--untracked-files=all")
+    files: set[str] = set()
+    for line in out.splitlines():
+        if len(line) < 4:
+            continue
+        path = line[3:]
+        # rename entries look like "old -> new"; both sides moved
+        if " -> " in path:
+            old, _, new = path.partition(" -> ")
+            files.add(old.strip().strip('"'))
+            files.add(new.strip().strip('"'))
+        else:
+            files.add(path.strip().strip('"'))
+    return files
+
+
+def blob_at_commit(repo_root: Path, sha: str, rel_path: str) -> str | None:
+    """Blob sha of `rel_path` as of commit `sha`, or None if absent there."""
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", f"{sha}:{rel_path}"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()

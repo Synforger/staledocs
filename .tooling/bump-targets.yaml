@@ -23,15 +23,14 @@
 # match elsewhere in the file cannot fire by accident.
 # =============================================================================
 
-current_version: 0.0.0
+current_version: 0.1.0
 
 targets:
-  # Example (python): split _MAJOR/_MINOR/_PATCH lines in src/my_package/version.py
-  - file: src/my_package/version.py
+  - file: pyproject.toml
     replacements:
-      - search: '_MAJOR = "{OLD_MAJOR}"'
-        replace: '_MAJOR = "{NEW_MAJOR}"'
-      - search: '_MINOR = "{OLD_MINOR}"'
-        replace: '_MINOR = "{NEW_MINOR}"'
-      - search: '_PATCH = "{OLD_PATCH}"'
-        replace: '_PATCH = "{NEW_PATCH}"'
+      - search: 'version = "{OLD}"'
+        replace: 'version = "{NEW}"'
+  - file: src/staledocs/__init__.py
+    replacements:
+      - search: '__version__ = "{OLD}"'
+        replace: '__version__ = "{NEW}"'

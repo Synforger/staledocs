@@ -1,9 +1,10 @@
 # Documentation
 
-利用者向けドキュメントの入口。 派生プロジェクトでは以下の 3 セクションに沿って書く:
+User-facing documentation entry point:
 
-- [Setup](setup/) — インストール / 初期設定 / 前提環境
-- [Troubleshooting](troubleshooting/) — トラブルシュート / 運用 / 常駐 service 管理
-- [Reference](reference/) — 設定 / データスキーマ / API リファレンス
+- [Setup](setup/) — install, `staledocs init`, brownfield onboarding
+- [Reference](reference/) — config schema, pair states, JSON contract
+- [Agent integration](agent-integration.md) — closing the L3 loop with an AI agent
+- [Troubleshooting](troubleshooting/) — tuning anchor noise, amber semantics, merge conflicts
 
-開発者向けの内部資料は [`internals/`](internals/) を参照。
+Contributor-facing internals live in [`internals/`](internals/).
