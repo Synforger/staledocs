@@ -37,8 +37,8 @@
 - `task gen-notices` — THIRD_PARTY_NOTICES.md を installed dep tree から再生成
 - `task setup:branch-protection` — main 保護を gh CLI で設定
 
-詳細は `_core/.tooling/local-ci/` 内のスクリプトを参照。
+詳細は `.tooling/local-ci/` 内のスクリプトを参照。
 
 ## toolchain 真値
 
-`_core/.tooling/versions.yaml` が**host が満たすべき toolchain version の floor 真値**。 派生 repo は新 PC で `task doctor` を叩けば「何 install すべきか」 が出るし、 `versions.yaml` を bump した時は `task lint:versions` で下流 config (= pyproject.toml / package.json) が同期してるか確認できる。 新 stack 追加時は本 file に 1 行追加 + 下流 config を該当 file に書く形 = 真値分散ゼロ。
+`.tooling/versions.yaml` が**host が満たすべき toolchain version の floor 真値**。 派生 repo は新 PC で `task doctor` を叩けば「何 install すべきか」 が出るし、 `versions.yaml` を bump した時は `task lint:versions` で下流 config (= pyproject.toml / package.json) が同期してるか確認できる。 新 stack 追加時は本 file に 1 行追加 + 下流 config を該当 file に書く形 = 真値分散ゼロ。

@@ -1,0 +1,30 @@
+# staledocs applied to itself — the dogfood is the point.
+version: 1
+gate: strict
+
+source:
+  include: ["src/**"]
+docs:
+  include: ["docs/**/*.md", "README.md", "README.ja.md"]
+  exclude: ["docs/internals/**"]
+
+pairs:
+  - doc: docs/reference/README.md
+    code: ["src/staledocs/**"]
+  - doc: docs/agent-integration.md
+    code: ["src/staledocs/report.py", "src/staledocs/cli.py", "src/staledocs/engine.py"]
+  - doc: docs/setup/README.md
+    code: ["src/staledocs/cli.py", "src/staledocs/config.py"]
+
+standalone:
+  - docs/README.md
+  - docs/troubleshooting/README.md
+
+global:
+  - README.md
+  - README.ja.md
+
+anchors:
+  min_length: 3
+  ignore: []
+  include_fenced: false
