@@ -129,3 +129,31 @@ def test_stale_ledger_entry_reported(paired_repo):
     )
     result = _check(paired_repo)
     assert result.stale_ledger_docs == ["docs/deleted.md"]
+
+
+def test_standalone_doc_gitignored_path_passes(paired_repo):
+    _ack_all(paired_repo)
+    paired_repo.write(".gitignore", "logs/\n")
+    paired_repo.write("docs/runbook.md", "# Ops\n\nCheck `logs/app.log` when it breaks.\n")
+    cfg_path = paired_repo.root / ".staledocs.yaml"
+    cfg_path.write_text(
+        cfg_path.read_text(encoding="utf-8") + "standalone: [docs/runbook.md]\n",
+        encoding="utf-8",
+    )
+    paired_repo.commit("runbook")
+    result = _check(paired_repo)
+    tokens = [f.token for f in result.anchor_findings]
+    assert "logs/app.log" not in tokens
+
+
+def test_standalone_doc_dead_path_still_flags(paired_repo):
+    _ack_all(paired_repo)
+    paired_repo.write("docs/runbook.md", "# Ops\n\nSee `src/gone/thing.py` for details.\n")
+    cfg_path = paired_repo.root / ".staledocs.yaml"
+    cfg_path.write_text(
+        cfg_path.read_text(encoding="utf-8") + "standalone: [docs/runbook.md]\n",
+        encoding="utf-8",
+    )
+    paired_repo.commit("runbook")
+    result = _check(paired_repo)
+    assert "src/gone/thing.py" in [f.token for f in result.anchor_findings]
