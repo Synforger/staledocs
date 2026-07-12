@@ -26,11 +26,15 @@ Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
 
 Anchor resolution notes: paths that .gitignore rules would ignore pass (docs
-legitimately describe runtime artifacts); `path::symbol` anchors resolve the
-file and grep the symbol inside it; a slashless glob (`detect-*`) matches
-tracked-file basenames; tokens starting with `~`, `/`, or `$`, tokens whose
-digits outnumber their letters, and `<placeholder>` notation are not
-extracted at all.
+legitimately describe runtime artifacts); markdown-relative references
+(`../<dir>/<page>.md`) resolve against the doc's own directory;
+`path::symbol` anchors resolve the file and grep the symbol inside it (a
+gitignored path passes whole); call/assignment/subscript/glob notation falls
+back to the bare identifier (`truncate()`, `viewMode='x'`, `loading[sid]`,
+`system_*`); a slashless glob (`detect-*`) also matches tracked-file
+basenames; tokens starting with `~`, `/`, or `$`, tokens containing `://`,
+tokens whose digits outnumber their letters, and `<placeholder>` notation
+are not extracted at all.
 
 ## Pair states
 
