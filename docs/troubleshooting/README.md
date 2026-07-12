@@ -47,3 +47,16 @@ over the set you commit to.
 **Cause**: anchor verification reads every paired file once per doc.
 **Fix**: keep pairs narrow (a doc owning `src/**` re-reads the world),
 prefer per-package pairs, and exclude vendored trees from `source.include`.
+
+## gitleaks flags the pair ledger as an API key
+
+**Symptom**: a pre-commit secret scanner (gitleaks `generic-api-key`) blocks
+a commit touching `.staledocs/pairs/*.json`. **Cause**: the ledger stores
+git blob hashes — 40-hex strings that trip entropy heuristics. **Fix**: add
+a path allowlist to your repo's gitleaks config:
+
+```toml
+[allowlist]
+description = "staledocs pair ledger stores git blob hashes, not secrets"
+paths = ['''\.staledocs/pairs/.*\.json$''']
+```
