@@ -38,13 +38,25 @@ tasks:
     cmds:
       - echo "task update is a stub — define your stack's update command"
 
+  _venv:
+    internal: true
+    desc: Ensure the dev venv exists (idempotent; CI bootstraps through this)
+    status:
+      - test -x .venv/bin/ruff
+      - test -x .venv/bin/pytest
+    cmds:
+      - python3 -m venv .venv
+      - .venv/bin/pip install --quiet -e '.[dev]'
+
   lint:
     desc: Run ruff over src and tests
+    deps: [_venv]
     cmds:
       - .venv/bin/ruff check src/ tests/
 
   test:unit:
     desc: Run the pytest suite (real git fixtures, no mocks in the core path)
+    deps: [_venv]
     cmds:
       - .venv/bin/pytest
 
@@ -55,6 +67,7 @@ tasks:
 
   build:
     desc: Build the sdist and wheel
+    deps: [_venv]
     cmds:
       - .venv/bin/pip install --quiet build
       - .venv/bin/python -m build
