@@ -33,6 +33,7 @@ class Anchor:
     line: int
     token: str
     path_like: bool
+    doc_dir: str = ""
 
 
 @dataclass
@@ -54,9 +55,9 @@ def _looks_like_code(token: str, min_length: int) -> bool:
     # anchor (`docs/<name>.md`, `--flag <value>`); skip rather than false-flag
     if "<" in token or ">" in token:
         return False
-    # machine-absolute paths (`~/.config/...`, `/usr/bin/...`) and shell
-    # variables (`$HOME/...`) live outside the repo — unverifiable
-    if token.startswith(("~", "/", "$")):
+    # machine-absolute paths (`~/.config/...`, `/usr/bin/...`), shell
+    # variables (`$HOME/...`), and URLs live outside the repo — unverifiable
+    if token.startswith(("~", "/", "$")) or "://" in token:
         return False
     # sample-output tokens (`7d:53%`, `ctx:███ 35%`): digits dominating the
     # letters, or block-element art — renderings, not identifiers
@@ -105,8 +106,15 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
                 continue
             if not _looks_like_code(token, rule.min_length):
                 continue
+            doc_dir = doc.rsplit("/", 1)[0] if "/" in doc else ""
             anchors.append(
-                Anchor(doc=doc, line=lineno, token=token, path_like=_is_path_like(token))
+                Anchor(
+                    doc=doc,
+                    line=lineno,
+                    token=token,
+                    path_like=_is_path_like(token),
+                    doc_dir=doc_dir,
+                )
             )
     return anchors
 
@@ -124,13 +132,9 @@ def _path_exists(
     all_files: set[str],
     all_dirs: set[str],
     path_roots: list[str] | None = None,
+    doc_dir: str = "",
 ) -> bool:
-    norm = _normalize_path_token(token)
-    if not norm:
-        return False
-    # a doc may describe a subtree from its deployed root (a template payload
-    # under src/, a package under packages/x/): try each configured root too
-    candidates = [norm] + [f"{r.strip('/')}/{norm}" for r in (path_roots or [])]
+    candidates = _path_candidates(token, path_roots, doc_dir)
     for cand in candidates:
         if cand in all_files or cand in all_dirs:
             return True
@@ -142,11 +146,22 @@ def _path_exists(
     return False
 
 
-def _path_candidates(token: str, path_roots: list[str] | None) -> list[str]:
+def _path_candidates(
+    token: str, path_roots: list[str] | None, doc_dir: str = ""
+) -> list[str]:
     norm = _normalize_path_token(token)
     if not norm:
         return []
-    return [norm] + [f"{r.strip('/')}/{norm}" for r in (path_roots or [])]
+    cands = [norm] + [f"{r.strip('/')}/{norm}" for r in (path_roots or [])]
+    # markdown-relative references (`../protocol/streams.md`, `launchd/x.plist`)
+    # resolve against the doc's own directory
+    if doc_dir:
+        from posixpath import normpath
+
+        rel = normpath(f"{doc_dir}/{token.strip()}")
+        if not rel.startswith(".."):
+            cands.append(rel.strip("/"))
+    return cands
 
 
 def _resolve_path(
@@ -154,9 +169,10 @@ def _resolve_path(
     all_files: set[str],
     all_dirs: set[str],
     path_roots: list[str] | None = None,
+    doc_dir: str = "",
 ) -> str | None:
     """The first candidate that names a tracked file (not a dir), or None."""
-    for cand in _path_candidates(token, path_roots):
+    for cand in _path_candidates(token, path_roots, doc_dir):
         if cand in all_files:
             return cand
     return None
@@ -222,34 +238,41 @@ def verify(
     findings: list[AnchorFinding] = []
     basenames: set[str] | None = None
 
-    def _ignored(token: str) -> bool:
+    def _ignored(token: str, doc_dir: str = "") -> bool:
         if check_ignored is None:
             return False
-        cands = _path_candidates(token, path_roots)
+        cands = _path_candidates(token, path_roots, doc_dir)
         return bool(cands) and bool(check_ignored(cands))
 
     for anchor in anchors:
         token = anchor.token
         if "::" in token and "." in token.partition("::")[0]:
             # `path::symbol` (or `file.py::symbol`): resolve the file, then
-            # grep the symbol inside that one file
+            # grep the symbol inside that one file. A gitignored path passes
+            # whole — the file is a runtime artifact we cannot open on CI.
             path_part, _, symbol = token.partition("::")
-            resolved = _resolve_path(path_part, all_files, all_dirs, path_roots)
+            if _ignored(path_part, anchor.doc_dir):
+                continue
+            resolved = _resolve_path(
+                path_part, all_files, all_dirs, path_roots, anchor.doc_dir
+            )
             if resolved is None or (
-                symbol and not CodeIndex(repo_root, [resolved]).contains(symbol)
+                symbol and not CodeIndex(repo_root, [resolved]).contains(_bare(symbol))
             ):
                 findings.append(
                     AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
                 )
             continue
         if anchor.path_like:
-            if _path_exists(token, all_files, all_dirs, path_roots) or _ignored(token):
+            if _path_exists(
+                token, all_files, all_dirs, path_roots, anchor.doc_dir
+            ) or _ignored(token, anchor.doc_dir):
                 continue
             findings.append(
                 AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
             )
             continue
-        if _path_exists(token, all_files, all_dirs, path_roots):
+        if _path_exists(token, all_files, all_dirs, path_roots, anchor.doc_dir):
             continue
         if any(ch in token for ch in "*?[") and "/" not in token:
             if basenames is None:
@@ -262,16 +285,33 @@ def verify(
         scope = "pair" if pair_index is not None else "repo"
         if index.contains(token):
             continue
-        if "." in token:
-            tail = token.rsplit(".", 1)[-1]
+        bare = _bare(token)
+        if bare != token and len(bare) >= 2 and index.contains(bare):
+            continue
+        if "." in bare:
+            tail = bare.rsplit(".", 1)[-1]
             if len(tail) >= 2 and index.contains(tail):
                 continue
-        if _ignored(token):
+        if _ignored(token, anchor.doc_dir):
             continue
         findings.append(
             AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope)
         )
     return findings
+
+
+def _bare(token: str) -> str:
+    """Strip call/assignment/subscript/glob notation down to the identifier.
+
+    `truncate()` / `is_viewed(sid)` -> the name before `(`;
+    `viewMode='terminal'` -> the name before `=`;
+    `loading[sid]` / `content[]` -> the name before `[`;
+    `system_*` -> the prefix before the glob char.
+    """
+    for sep in ("(", "=", "[", "*", "?"):
+        if sep in token:
+            token = token.split(sep, 1)[0]
+    return token.strip()
 
 
 def dirs_of(files: set[str]) -> set[str]:

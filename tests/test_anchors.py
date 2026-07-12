@@ -46,9 +46,9 @@ def test_path_like_detection():
     ]
 
 
-def test_urls_are_not_path_like_and_not_findings(tmp_path: Path):
+def test_urls_are_not_extracted(tmp_path: Path):
     got = anchors.extract("d.md", "Visit `https://example.com/x`.\n", RULE)
-    assert got and not got[0].path_like
+    assert got == []
 
 
 def test_verify_identifier_against_pair_scope(tmp_path: Path):
@@ -208,3 +208,54 @@ def test_digit_heavy_and_art_tokens_skipped():
 def test_shell_var_tokens_skipped():
     text = "Word list at `$HOME/.config/anon-words/master.txt`.\n"
     assert _tokens(text) == []
+
+
+def test_doc_relative_path_resolution(tmp_path: Path):
+    text = "See `../protocol/streams.md` and `launchd/x.plist`.\n"
+    found = anchors.extract("docs/setup/guide.md", text, RULE)
+    files = {"docs/protocol/streams.md", "docs/setup/launchd/x.plist"}
+    findings = anchors.verify(
+        tmp_path, "docs/setup/guide.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files),
+    )
+    assert findings == []
+
+
+def test_doc_relative_does_not_mask_dead_links(tmp_path: Path):
+    found = anchors.extract("docs/setup/guide.md", "See `../gone/nothing.md`.\n", RULE)
+    files = {"docs/setup/guide.md"}
+    findings = anchors.verify(
+        tmp_path, "docs/setup/guide.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files),
+    )
+    assert [f.token for f in findings] == ["../gone/nothing.md"]
+
+
+def test_call_and_subscript_notation_falls_back_to_bare_name(tmp_path: Path):
+    (tmp_path / "a.js").write_text(
+        "const loading = {}; function truncate(s) {}; let viewMode = 'x';\n",
+        encoding="utf-8",
+    )
+    text = "`truncate()` and `loading[sid]` and `viewMode='terminal'` work.\n"
+    found = anchors.extract("d.md", text, RULE)
+    idx = CodeIndex(tmp_path, ["a.js"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert findings == []
+
+
+def test_glob_identifier_prefix_greps(tmp_path: Path):
+    (tmp_path / "a.py").write_text('emit("system_init")\n', encoding="utf-8")
+    found = anchors.extract("d.md", "Events named `system_*` fan out.\n", RULE)
+    idx = CodeIndex(tmp_path, ["a.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert findings == []
+
+
+def test_symbol_anchor_into_gitignored_file_passes(tmp_path: Path):
+    found = anchors.extract("d.md", "Set `config.json::agents` locally.\n", RULE)
+    ignored = lambda cands: {c for c in cands if c.startswith("config.json")}  # noqa: E731
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        set(), set(), check_ignored=ignored,
+    )
+    assert findings == []
