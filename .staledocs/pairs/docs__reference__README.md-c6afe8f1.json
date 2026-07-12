@@ -1,8 +1,8 @@
 {
   "ack": {
-    "at": "2026-07-12T21:05:50+00:00",
+    "at": "2026-07-12T21:06:34+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "d3e6e44dbdeeb684cf19fc300389e8730996e4c1",
+      "src/staledocs/__init__.py": "5a054460ac7b8d78a5fa1e10b3e3d275b48d608a",
       "src/staledocs/anchors.py": "a743e58a2f2508e182410d5ff1543168a2d70910",
       "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
       "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3",
@@ -13,9 +13,9 @@
       "src/staledocs/mapping.py": "73a6cdae305c610708eadba0614f59b8f8e9961c",
       "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
     },
-    "commit": "11d3690304c68b21c79c083173852adb8d8769bf",
-    "doc_blob": "4280b4f58b91521cd8f00240395f027b907005d8",
-    "note": "engine wiring fix, no doc-facing change"
+    "commit": "8b2897aca68739d60204df0af559178775d896ef",
+    "doc_blob": "4cf7a9a4776cb1ea5b01027466cf5bfe4b7688f5",
+    "note": "0.1.4 bump"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
