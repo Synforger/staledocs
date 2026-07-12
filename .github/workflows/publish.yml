@@ -1,0 +1,45 @@
+name: Publish to PyPI
+
+# Trusted Publishing (OIDC): no API token stored anywhere. PyPI trusts this
+# exact repo + workflow + environment via a pending-publisher registration.
+#
+# Triggers: a published GitHub release, plus workflow_dispatch as a manual
+# fallback (this repo has a known quirk where some webhook-driven events do
+# not fire; dispatch always works).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --quiet build
+          python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      id-token: write  # OIDC for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
