@@ -151,3 +151,23 @@ def blob_at_commit(repo_root: Path, sha: str, rel_path: str) -> str | None:
     if proc.returncode != 0:
         return None
     return proc.stdout.strip()
+
+
+def ignored_paths(repo_root: Path, candidates: list[str]) -> set[str]:
+    """Subset of `candidates` that .gitignore rules would ignore.
+
+    Deterministic from repo state (works identically on a fresh CI checkout
+    where the runtime files themselves do not exist).
+    """
+    if not candidates:
+        return set()
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "check-ignore", "--stdin"],
+        input="\n".join(candidates) + "\n",
+        capture_output=True,
+        text=True,
+    )
+    # exit 0 = some ignored, 1 = none ignored, 128 = error
+    if proc.returncode not in (0, 1):
+        return set()
+    return {line for line in proc.stdout.splitlines() if line}
