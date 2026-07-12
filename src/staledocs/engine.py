@@ -212,6 +212,9 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
     all_dirs = anchors_mod.dirs_of(tracked)
     repo_index = CodeIndex(repo_root, sorted(mapping.source_files))
 
+    def check_ignored(cands: list[str]) -> set[str]:
+        return gitio.ignored_paths(repo_root, cands)
+
     def _doc_anchors(doc: str, pair_files: list[str] | None) -> None:
         try:
             text = (repo_root / doc).read_text(encoding="utf-8", errors="ignore")
@@ -231,6 +234,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                 tracked,
                 all_dirs,
                 cfg.anchors.path_roots,
+                check_ignored,
             )
         )
 

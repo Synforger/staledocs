@@ -11,6 +11,7 @@ point at the exact doc line that rotted.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -53,9 +54,17 @@ def _looks_like_code(token: str, min_length: int) -> bool:
     # anchor (`docs/<name>.md`, `--flag <value>`); skip rather than false-flag
     if "<" in token or ">" in token:
         return False
-    # machine-absolute paths (`~/.config/...`, `/usr/bin/...`) live outside
-    # the repo and can never be verified against it
-    if token.startswith("~") or token.startswith("/"):
+    # machine-absolute paths (`~/.config/...`, `/usr/bin/...`) and shell
+    # variables (`$HOME/...`) live outside the repo — unverifiable
+    if token.startswith(("~", "/", "$")):
+        return False
+    # sample-output tokens (`7d:53%`, `ctx:███ 35%`): digits dominating the
+    # letters, or block-element art — renderings, not identifiers
+    letters = sum(ch.isalpha() for ch in token)
+    digits = sum(ch.isdigit() for ch in token)
+    if digits > letters:
+        return False
+    if any(ch in "█░▓▒" for ch in token):
         return False
     if token.startswith("--") or token.startswith("-") and len(token) > 2:
         return True
@@ -133,6 +142,26 @@ def _path_exists(
     return False
 
 
+def _path_candidates(token: str, path_roots: list[str] | None) -> list[str]:
+    norm = _normalize_path_token(token)
+    if not norm:
+        return []
+    return [norm] + [f"{r.strip('/')}/{norm}" for r in (path_roots or [])]
+
+
+def _resolve_path(
+    token: str,
+    all_files: set[str],
+    all_dirs: set[str],
+    path_roots: list[str] | None = None,
+) -> str | None:
+    """The first candidate that names a tracked file (not a dir), or None."""
+    for cand in _path_candidates(token, path_roots):
+        if cand in all_files:
+            return cand
+    return None
+
+
 class CodeIndex:
     """Lazy substring index over a set of files (content loaded once)."""
 
@@ -167,42 +196,80 @@ def verify(
     all_files: set[str],
     all_dirs: set[str],
     path_roots: list[str] | None = None,
+    check_ignored: Callable[[list[str]], set[str]] | None = None,
 ) -> list[AnchorFinding]:
     """Findings for anchors that no longer resolve.
 
     - path-like anchors verify against the repo file tree (repo-wide: a doc
       may legitimately reference paths outside its own pair), with each
       configured `path_roots` prefix tried too (docs describing a deployed
-      subtree quote paths relative to that subtree's root)
+      subtree quote paths relative to that subtree's root); a path that
+      .gitignore rules would ignore passes — docs legitimately describe
+      runtime artifacts (logs, local config, caches) that are never tracked
+    - `path::symbol` anchors resolve the path, then grep the symbol inside
+      that one file
     - identifier anchors first check the file tree (a bare filename like
       `README.ja.md` is a path reference without a slash), then the paired
       code only (searching the whole repo would let a same-named survivor
       elsewhere mask a rename); docs with no pair (global class) fall back
       to the repo-wide index
+    - a slashless glob (`detect-*`) matches against tracked-file basenames
+      (a name pattern, not a path)
     - a dotted identifier (`anchors.include_fenced` config notation) passes
       when its final segment resolves, so doc-side key paths don't need to
       exist verbatim in code
     """
     findings: list[AnchorFinding] = []
+    basenames: set[str] | None = None
+
+    def _ignored(token: str) -> bool:
+        if check_ignored is None:
+            return False
+        cands = _path_candidates(token, path_roots)
+        return bool(cands) and bool(check_ignored(cands))
+
     for anchor in anchors:
-        if anchor.path_like:
-            if not _path_exists(anchor.token, all_files, all_dirs, path_roots):
+        token = anchor.token
+        if "::" in token and "." in token.partition("::")[0]:
+            # `path::symbol` (or `file.py::symbol`): resolve the file, then
+            # grep the symbol inside that one file
+            path_part, _, symbol = token.partition("::")
+            resolved = _resolve_path(path_part, all_files, all_dirs, path_roots)
+            if resolved is None or (
+                symbol and not CodeIndex(repo_root, [resolved]).contains(symbol)
+            ):
                 findings.append(
-                    AnchorFinding(doc=doc, line=anchor.line, token=anchor.token, scope="repo")
+                    AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
                 )
             continue
-        if _path_exists(anchor.token, all_files, all_dirs, path_roots):
+        if anchor.path_like:
+            if _path_exists(token, all_files, all_dirs, path_roots) or _ignored(token):
+                continue
+            findings.append(
+                AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
+            )
             continue
+        if _path_exists(token, all_files, all_dirs, path_roots):
+            continue
+        if any(ch in token for ch in "*?[") and "/" not in token:
+            if basenames is None:
+                basenames = {f.rsplit("/", 1)[-1] for f in all_files}
+            from . import globs
+
+            if any(globs.matches(token, b) for b in basenames):
+                continue
         index = pair_index if pair_index is not None else repo_index
         scope = "pair" if pair_index is not None else "repo"
-        if index.contains(anchor.token):
+        if index.contains(token):
             continue
-        if "." in anchor.token:
-            tail = anchor.token.rsplit(".", 1)[-1]
+        if "." in token:
+            tail = token.rsplit(".", 1)[-1]
             if len(tail) >= 2 and index.contains(tail):
                 continue
+        if _ignored(token):
+            continue
         findings.append(
-            AnchorFinding(doc=doc, line=anchor.line, token=anchor.token, scope=scope)
+            AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope)
         )
     return findings
 
