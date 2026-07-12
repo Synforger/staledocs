@@ -123,3 +123,38 @@ def test_dotted_identifier_falls_back_to_last_segment(tmp_path: Path):
     idx = CodeIndex(tmp_path, ["a.py"])
     findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
     assert findings == []
+
+
+def test_machine_absolute_paths_skipped():
+    text = "Config lives in `~/.config/tool/` and `/usr/local/bin/tool`.\n"
+    assert _tokens(text) == []
+
+
+def test_path_roots_resolve_subtree_relative_paths(tmp_path: Path):
+    found = anchors.extract("d.md", "See `rules/always.md` in the payload.\n", RULE)
+    files = {"src/rules/always.md"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), path_roots=["src"],
+    )
+    assert findings == []
+
+
+def test_path_roots_do_not_mask_real_dead_paths(tmp_path: Path):
+    found = anchors.extract("d.md", "See `rules/gone.md` here.\n", RULE)
+    files = {"src/rules/always.md"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), path_roots=["src"],
+    )
+    assert [f.token for f in findings] == ["rules/gone.md"]
+
+
+def test_path_roots_with_glob_tokens(tmp_path: Path):
+    found = anchors.extract("d.md", "All of `rules/lazy/*.md` apply.\n", RULE)
+    files = {"src/rules/lazy/one.md"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), path_roots=["src"],
+    )
+    assert findings == []

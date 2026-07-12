@@ -53,6 +53,10 @@ def _looks_like_code(token: str, min_length: int) -> bool:
     # anchor (`docs/<name>.md`, `--flag <value>`); skip rather than false-flag
     if "<" in token or ">" in token:
         return False
+    # machine-absolute paths (`~/.config/...`, `/usr/bin/...`) live outside
+    # the repo and can never be verified against it
+    if token.startswith("~") or token.startswith("/"):
+        return False
     if token.startswith("--") or token.startswith("-") and len(token) > 2:
         return True
     if any(ch in _CODE_PUNCT for ch in token):
@@ -106,17 +110,26 @@ def _normalize_path_token(token: str) -> str:
     return token.strip("/")
 
 
-def _path_exists(token: str, all_files: set[str], all_dirs: set[str]) -> bool:
+def _path_exists(
+    token: str,
+    all_files: set[str],
+    all_dirs: set[str],
+    path_roots: list[str] | None = None,
+) -> bool:
     norm = _normalize_path_token(token)
     if not norm:
         return False
-    if norm in all_files or norm in all_dirs:
-        return True
-    # tokens like "src/foo/*.py" or "docs/**" — satisfied if any file matches
-    if any(ch in norm for ch in "*?["):
-        from . import globs
+    # a doc may describe a subtree from its deployed root (a template payload
+    # under src/, a package under packages/x/): try each configured root too
+    candidates = [norm] + [f"{r.strip('/')}/{norm}" for r in (path_roots or [])]
+    for cand in candidates:
+        if cand in all_files or cand in all_dirs:
+            return True
+        if any(ch in cand for ch in "*?["):
+            from . import globs
 
-        return any(globs.matches(norm, f) for f in all_files)
+            if any(globs.matches(cand, f) for f in all_files):
+                return True
     return False
 
 
@@ -153,11 +166,14 @@ def verify(
     repo_index: CodeIndex,
     all_files: set[str],
     all_dirs: set[str],
+    path_roots: list[str] | None = None,
 ) -> list[AnchorFinding]:
     """Findings for anchors that no longer resolve.
 
     - path-like anchors verify against the repo file tree (repo-wide: a doc
-      may legitimately reference paths outside its own pair)
+      may legitimately reference paths outside its own pair), with each
+      configured `path_roots` prefix tried too (docs describing a deployed
+      subtree quote paths relative to that subtree's root)
     - identifier anchors first check the file tree (a bare filename like
       `README.ja.md` is a path reference without a slash), then the paired
       code only (searching the whole repo would let a same-named survivor
@@ -170,12 +186,12 @@ def verify(
     findings: list[AnchorFinding] = []
     for anchor in anchors:
         if anchor.path_like:
-            if not _path_exists(anchor.token, all_files, all_dirs):
+            if not _path_exists(anchor.token, all_files, all_dirs, path_roots):
                 findings.append(
                     AnchorFinding(doc=doc, line=anchor.line, token=anchor.token, scope="repo")
                 )
             continue
-        if _path_exists(anchor.token, all_files, all_dirs):
+        if _path_exists(anchor.token, all_files, all_dirs, path_roots):
             continue
         index = pair_index if pair_index is not None else repo_index
         scope = "pair" if pair_index is not None else "repo"

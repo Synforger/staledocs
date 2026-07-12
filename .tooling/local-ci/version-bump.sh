@@ -125,16 +125,20 @@ for entry in data.get("targets") or []:
     total_edits += edits
 
 if not dry_run:
-    # Update current_version in the targets file itself. Naive line replacement
-    # (assumes 'current_version: "X.Y.Z"' on a single line).
+    # Update current_version in the targets file itself. Accepts both the
+    # quoted and unquoted YAML forms (init.py resets it unquoted) and fails
+    # loudly instead of pretending when nothing matched.
     targets_text = targets_path.read_text()
-    targets_text = re.sub(
-        r'^(current_version:\s*").*?(")',
+    targets_text, n = re.subn(
+        r'^(current_version:\s*"?)[0-9]+\.[0-9]+\.[0-9]+("?\s*)$',
         rf'\g<1>{new_version}\g<2>',
         targets_text,
         count=1,
         flags=re.MULTILINE,
     )
+    if n != 1:
+        print(f"error: could not rewrite current_version in {targets_path.name}", file=sys.stderr)
+        sys.exit(1)
     targets_path.write_text(targets_text)
     print(f"updated current_version in {targets_path.name} -> {new_version}")
 
