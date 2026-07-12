@@ -1,14 +1,14 @@
 {
   "ack": {
-    "at": "2026-07-12T20:00:54+00:00",
+    "at": "2026-07-12T20:48:04+00:00",
     "code_blobs": {
       "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
-      "src/staledocs/engine.py": "81ced76d9f90caa4bded90a8d1a21d2a0d443289",
+      "src/staledocs/engine.py": "da5797d11c1cc02f9d6a62ce39ee8e85eb13fd88",
       "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
     },
-    "commit": "fd9a25c9fee4db38b9e82a80cd1b1301d1c4cd79",
+    "commit": "16a3df1c481db6bffb6c129aceeffb8a43d448d9",
     "doc_blob": "ac3f48903fe7cd848da7032c64c3fcc10672de38",
-    "note": "path_roots feature follow-through"
+    "note": "v0.1.3 anchor semantics follow-through"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

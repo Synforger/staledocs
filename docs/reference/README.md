@@ -25,6 +25,13 @@
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
 
+Anchor resolution notes: paths that .gitignore rules would ignore pass (docs
+legitimately describe runtime artifacts); `path::symbol` anchors resolve the
+file and grep the symbol inside it; a slashless glob (`detect-*`) matches
+tracked-file basenames; tokens starting with `~`, `/`, or `$`, tokens whose
+digits outnumber their letters, and `<placeholder>` notation are not
+extracted at all.
+
 ## Pair states
 
 | State | Trigger | Gate class |
@@ -54,7 +61,7 @@ reported but yellow — clean up with `staledocs ack --prune`.
 
 ```jsonc
 {
-  "staledocs": "0.1.2",
+  "staledocs": "0.1.3",
   "schema": 1,
   "gate": "warn",
   "summary": { "red": 2, "amber": 1, "green": 7 },
