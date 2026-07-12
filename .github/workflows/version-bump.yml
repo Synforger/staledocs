@@ -1,0 +1,69 @@
+name: Version Bump (disabled by template)
+
+# This template variant (_template-prototype) does not consume GitHub
+# Actions minutes. Version bumps happen locally via `task version:bump`
+# (with optional `LEVEL=minor|major`). The workflow body is preserved
+# in case a derived project later wants automatic bumping on
+# `develop` merges, but as shipped both the trigger and the job-level
+# `if: false` guard keep billable minutes at zero. See
+# `.github/workflows/README.md` for the template policy.
+on:
+  workflow_dispatch:
+
+jobs:
+  bump:
+    if: false
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install bump-my-version
+        run: pip install bump-my-version
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: bump-my-version bump patch --no-tag
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          title: 'chore: bump version'
+          commit-message: 'chore: bump version [skip ci]'
+          branch: auto/version-bump
+          delete-branch: true
+          body: |
+            Automated version bump after merge to develop.
+
+            This PR was created automatically by GitHub Actions.
+
+      - name: Set status checks to success
+        if: steps.cpr.outputs.pull-request-number
+        run: |
+          SHA=$(gh pr view ${{ steps.cpr.outputs.pull-request-number }} --json headRefOid -q .headRefOid)
+          for context in "build (3.10, src)" "build (3.10, flat)" "build (3.13, src)" "build (3.13, flat)"; do
+            gh api repos/${{ github.repository }}/statuses/$SHA \
+              -f state=success \
+              -f context="$context" \
+              -f description="Skipped for version bump"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number
+        run: gh pr merge --auto --merge ${{ steps.cpr.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

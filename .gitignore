@@ -1,0 +1,67 @@
+# build artifacts
+
+.eggs/
+.mypy_cache
+*.egg-info/
+build/
+dist/
+pip-wheel-metadata/
+
+
+# dev tools
+
+.envrc
+.python-version
+.idea
+.venv/
+venv/
+/.vscode/**/*
+!/.vscode/settings.json
+!/.vscode/extensions.json
+/*.iml
+
+.githooks/*
+!/.githooks/pre-commit
+
+
+# jupyter notebooks
+
+.ipynb_checkpoints
+
+
+# miscellaneous
+
+.cache/
+docs/build/
+*.swp
+.DS_Store
+.hydra
+
+
+# python
+
+*.pyc
+*.pyo
+__pycache__
+
+
+# testing and continuous integration
+
+.coverage
+.benchmarks
+
+# documentation build artifacts
+
+# data
+/data/*
+
+# test coverage files
+pytest-coverage.txt
+pytest.xml
+htmlcov/*
+
+# local AI tooling config
+.claude/settings.local.json
+
+# 個人情報を含む(派生時は手元で作成・.example を参考に)
+.tooling/local-ci/anon-words.txt

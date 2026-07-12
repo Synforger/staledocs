@@ -1,0 +1,34 @@
+#!/bin/bash
+set -eu
+
+# Repo-local pre-commit rules. The machine-wide anon baseline runs in the
+# guard-dispatcher AFTER this hook (AND-composition) — do not duplicate the
+# anon scan here.
+
+# -----------------------------------------------------------------------------
+# 1. Branch-name guard: refuse direct commits on main / develop (personal habit).
+# -----------------------------------------------------------------------------
+branch="$(git symbolic-ref HEAD 2>/dev/null)" || "$(git describe --contains --all HEAD)"
+
+if [[ ${branch} =~ \/*main$ ]] || [[ ${branch} =~ \/*develop$ ]]; then
+    echo "Can't commit on branch whose name contains main or develop (use a feature branch + PR)."
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# 2. Secret scan via gitleaks (= staged files only, fast). Catches accidental
+#    `password = "..."` / API key paste / private key blob commits before they
+#    leave the working tree. `gitleaks protect --staged` is the lightweight
+#    pre-commit mode (= no history scan, just the diff).
+# -----------------------------------------------------------------------------
+if command -v gitleaks >/dev/null 2>&1; then
+    if ! gitleaks protect --staged --redact --no-banner 2>&1; then
+        echo ""
+        echo "gitleaks found secrets in staged files. Remove them or ask the"
+        echo "repo owner to allowlist a verified false positive."
+        exit 1
+    fi
+else
+    echo "warning: gitleaks not installed; skipping secret scan." \
+         "Install: brew install gitleaks  (or apt install gitleaks on Ubuntu)"
+fi

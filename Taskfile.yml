@@ -1,0 +1,152 @@
+# =============================================================================
+# personal-template / core Taskfile
+# =============================================================================
+# Language-neutral quality machinery: docs freshness, toolchain floor,
+# aggregate audit, release driver, GitHub settings. Language-specific tasks
+# (setup / lint / test / build / run) are intentionally thin stubs — fill
+# them in with your stack's commands after deriving. A `Taskfile.local.yml`
+# include is honoured if you prefer keeping your stack's tasks separate.
+# =============================================================================
+
+version: '3'
+
+includes:
+  local:
+    taskfile: ./Taskfile.local.yml
+    optional: true
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # ---------------------------------------------------------------------------
+  # Stack stubs — replace each echo with your project's real command (or
+  # define them in Taskfile.local.yml, which is included when present).
+  # Keeping the task names stable means every derived repo answers to the
+  # same verbs regardless of language.
+  # ---------------------------------------------------------------------------
+  setup:
+    desc: Initial setup (stub — fill in your stack's dependency install)
+    cmds:
+      - echo "task setup is a stub — define your stack's install command here or in Taskfile.local.yml"
+
+  update:
+    desc: Update dependencies (stub)
+    cmds:
+      - echo "task update is a stub — define your stack's update command"
+
+  lint:
+    desc: Run lint (stub)
+    cmds:
+      - echo "task lint is a stub — define your stack's linter"
+
+  test:unit:
+    desc: Run unit tests (stub)
+    cmds:
+      - echo "task test:unit is a stub — define your stack's unit test command"
+
+  test:integration:
+    desc: Run integration tests (stub)
+    cmds:
+      - echo "task test:integration is a stub — define your stack's integration test command"
+
+  build:
+    desc: Build artefacts (stub)
+    cmds:
+      - echo "task build is a stub — define your stack's build command"
+
+  run:
+    desc: Run the application (stub)
+    cmds:
+      - echo "task run is a stub — define your stack's run command"
+
+  # ---------------------------------------------------------------------------
+  # Language-neutral quality gates (no delegation).
+  # ---------------------------------------------------------------------------
+  ci:
+    desc: Full quality-gate suite (lint + tests + docs freshness + version drift) — same entry point locally and in CI
+    cmds:
+      - task: lint
+      - task: test:unit
+      - task: docs:check
+      - task: lint:versions
+
+  publish:check:
+    desc: Pre-publication gate for flipping a repo private -> public (full-history audits + OSS surface checks)
+    cmds:
+      - bash .tooling/local-ci/publish-check.sh
+
+  docs:check:
+    desc: Verify docs freshness (paths / task names / tree diagrams vs reality)
+    cmds:
+      - bash .tooling/local-ci/docs-check.sh
+
+  doctor:
+    desc: Full diagnostic — toolchain floor + hooks/machine armament in one pass
+    cmds:
+      - bash .tooling/local-ci/doctor.sh
+      - if [ -f "$HOME/.git-hooks/doctor.sh" ]; then bash "$HOME/.git-hooks/doctor.sh"; else echo "guard-dispatcher not armed on this machine (machine-wide hooks missing)"; fi
+
+  pr:create:
+    desc: Create a GitHub PR with the title/body anon-scanned first (TITLE= BODY_FILE= [BASE=main], needs guard-dispatcher)
+    cmds:
+      - bash "$HOME/.git-hooks/scripts/pr-create.sh" --title "{{.TITLE}}" --body-file "{{.BODY_FILE}}" --base "{{.BASE | default "main"}}"
+
+  lint:versions:
+    desc: Detect downstream toolchain drift vs .tooling/versions.yaml truth
+    cmds:
+      - bash .tooling/local-ci/lint-versions.sh
+
+  gen-notices:
+    desc: Regenerate THIRD_PARTY_NOTICES.md from the installed dep tree (python + node)
+    cmds:
+      - python3 scripts/gen-third-party-notices.py
+
+  audit:
+    desc: Aggregate security audit (anon-scan + gitleaks full history + pip-audit + npm audit)
+    cmds:
+      - bash .tooling/local-ci/audit.sh
+
+  audit:deep:
+    desc: Deep anon audit across 11 sources (needs guard-dispatcher armed on this machine)
+    cmds:
+      - bash "$HOME/.git-hooks/scanners/anon-audit-deep.sh"
+
+  clean:
+    desc: Clean build artefacts + caches (auto-detects present stacks; LAYER=<stack>|docs|all narrows)
+    vars:
+      LAYER: '{{.LAYER | default "all"}}'
+    cmds:
+      - bash .tooling/local-ci/clean.sh {{.LAYER}}
+
+  version:bump:
+    desc: Bump version in bump-targets.yaml + listed files (LEVEL=patch|minor|major, DRY_RUN=1 for plan-only)
+    vars:
+      LEVEL: '{{.LEVEL | default "patch"}}'
+      DRY_RUN: '{{.DRY_RUN | default "0"}}'
+    cmds:
+      - LEVEL={{.LEVEL}} DRY_RUN={{.DRY_RUN}} bash .tooling/local-ci/version-bump.sh
+
+  release:cut:
+    desc: Bump version + commit + tag + push (LEVEL=patch|minor|major, SKIP_PUSH=1 to keep local, DRY_RUN=1 for plan-only)
+    vars:
+      LEVEL: '{{.LEVEL | default "patch"}}'
+      DRY_RUN: '{{.DRY_RUN | default "0"}}'
+      SKIP_PUSH: '{{.SKIP_PUSH | default "0"}}'
+    cmds:
+      - LEVEL={{.LEVEL}} DRY_RUN={{.DRY_RUN}} SKIP_PUSH={{.SKIP_PUSH}} bash .tooling/local-ci/release-cut.sh
+
+  setup:branch-protection:
+    desc: Setup branch protection rules for the main branch
+    cmds:
+      - bash scripts/setup-branch-protection.sh
+
+  init:github:
+    desc: Apply post-template GitHub settings (= secret scanning, PVR, merge config, branch protection)
+    vars:
+      OWNER: '{{.OWNER | default ""}}'
+      REPO: '{{.REPO | default ""}}'
+    cmds:
+      - OWNER={{.OWNER}} REPO={{.REPO}} bash scripts/post-init-github-settings.sh
