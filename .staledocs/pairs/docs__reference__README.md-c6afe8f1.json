@@ -1,21 +1,21 @@
 {
   "ack": {
-    "at": "2026-07-12T19:03:51+00:00",
+    "at": "2026-07-12T20:00:54+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "d46a5abccb838ca9c86f0a4e3bd4444ab48b1e6b",
-      "src/staledocs/anchors.py": "aec9182db2d88ffbcf2f82df57b077aa39ce2436",
+      "src/staledocs/anchors.py": "ea265e0fe86671031f4913581c80916356b8a023",
       "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
-      "src/staledocs/config.py": "61876e19e37769cbf437df64f2dfdd3cc612c7b2",
-      "src/staledocs/engine.py": "5ae025ccdcc94ecc9dc96f1c48487cd0978c8cb4",
+      "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3",
+      "src/staledocs/engine.py": "81ced76d9f90caa4bded90a8d1a21d2a0d443289",
       "src/staledocs/gitio.py": "ad64dfd3d1578187a803653789fe409f25ff1f85",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "e61438d9ac2c99badb99f1dc8ddfc351de58b78e",
       "src/staledocs/mapping.py": "73a6cdae305c610708eadba0614f59b8f8e9961c",
       "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
     },
-    "commit": "bee2cac45784b769948f8eba9347300348f87331",
-    "doc_blob": "5d3eec1e2b358483ce222dcb0315560e41c0f7da",
-    "note": "version bump follow-through"
+    "commit": "fd9a25c9fee4db38b9e82a80cd1b1301d1c4cd79",
+    "doc_blob": "7e55037345284284ec494963d6705acba5d57bd3",
+    "note": "path_roots feature follow-through"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
