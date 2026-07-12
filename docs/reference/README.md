@@ -65,7 +65,7 @@ reported but yellow — clean up with `staledocs ack --prune`.
 
 ```jsonc
 {
-  "staledocs": "0.1.5",
+  "staledocs": "0.1.6",
   "schema": 1,
   "gate": "warn",
   "summary": { "red": 2, "amber": 1, "green": 7 },
