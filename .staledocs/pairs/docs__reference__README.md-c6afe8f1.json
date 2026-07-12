@@ -1,8 +1,8 @@
 {
   "ack": {
-    "at": "2026-07-12T21:14:41+00:00",
+    "at": "2026-07-12T21:47:11+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "09f96398468618596fd727238587652e3e6450cd",
+      "src/staledocs/__init__.py": "07eda25f8ee2188654005b1627a7dca3bad6a34f",
       "src/staledocs/anchors.py": "bff281dd9f8b68ee8c93609e2c92a94313b089d9",
       "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
       "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3",
@@ -13,9 +13,9 @@
       "src/staledocs/mapping.py": "73a6cdae305c610708eadba0614f59b8f8e9961c",
       "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
     },
-    "commit": "2d5c1b1035fccffa001297ab7de68eff6d46651c",
-    "doc_blob": "4302aabae5a85d4fe65e3b196edd6de310b16d05",
-    "note": "0.1.5 bump"
+    "commit": "cc45d835c11ed83befffc84759afc30d2ad3d45d",
+    "doc_blob": "e6a319eae2c6ae1e67c28b90ea7a33b3e4191d36",
+    "note": "0.1.6 bump"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
