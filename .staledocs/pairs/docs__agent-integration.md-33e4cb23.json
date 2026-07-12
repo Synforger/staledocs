@@ -1,0 +1,15 @@
+{
+  "ack": {
+    "at": "2026-07-12T18:29:57+00:00",
+    "code_blobs": {
+      "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
+      "src/staledocs/engine.py": "5ae025ccdcc94ecc9dc96f1c48487cd0978c8cb4",
+      "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
+    },
+    "commit": "03de2fd736bc9e49d81abe88cf03a270a7b0e277",
+    "doc_blob": "ac3f48903fe7cd848da7032c64c3fcc10672de38",
+    "note": ""
+  },
+  "doc": "docs/agent-integration.md",
+  "schema": 1
+}
