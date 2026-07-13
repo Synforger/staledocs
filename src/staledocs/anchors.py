@@ -321,3 +321,59 @@ def dirs_of(files: set[str]) -> set[str]:
         for i in range(1, len(parts)):
             dirs.add("/".join(parts[:i]))
     return dirs
+
+
+def doc_mention_index(
+    repo_root: Path,
+    doc: str,
+    rule: AnchorRule,
+    all_files: set[str],
+    all_dirs: set[str],
+    path_roots: list[str] | None = None,
+) -> tuple[set[str], list[str]]:
+    """What this doc talks about, per its own anchors.
+
+    Returns (mentioned_files, identifier_tokens):
+      - mentioned_files: repo files the doc's path-like anchors resolve to
+      - identifier_tokens: bare identifier anchors (call/subscript notation
+        stripped) to grep against changed files
+
+    Used by the anchor-weighted L1: a pair break is RED only when a changed
+    file is one the doc actually mentions — either by path, or by containing
+    a quoted identifier. Everything else downgrades to AMBER.
+    """
+    try:
+        text = (repo_root / doc).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return set(), []
+    mentioned: set[str] = set()
+    idents: list[str] = []
+    for anchor in extract(doc, text, rule):
+        token = anchor.token
+        if "::" in token and "." in token.partition("::")[0]:
+            resolved = _resolve_path(
+                token.partition("::")[0], all_files, all_dirs, path_roots, anchor.doc_dir
+            )
+            if resolved:
+                mentioned.add(resolved)
+            continue
+        if anchor.path_like:
+            for cand in _path_candidates(token, path_roots, anchor.doc_dir):
+                if cand in all_files:
+                    mentioned.add(cand)
+                elif cand in all_dirs:
+                    prefix = cand.rstrip("/") + "/"
+                    mentioned.update(f for f in all_files if f.startswith(prefix))
+                elif any(ch in cand for ch in "*?["):
+                    from . import globs
+
+                    mentioned.update(f for f in all_files if globs.matches(cand, f))
+            continue
+        resolved = _resolve_path(token, all_files, all_dirs, path_roots, anchor.doc_dir)
+        if resolved:
+            mentioned.add(resolved)
+            continue
+        bare = _bare(token)
+        if len(bare) >= 3:
+            idents.append(bare)
+    return mentioned, idents

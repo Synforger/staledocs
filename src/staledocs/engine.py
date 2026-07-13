@@ -49,6 +49,7 @@ class PairReport:
     ack_commit: str | None = None
     ack_at: str = ""
     detail: str = ""
+    mentioned_changed: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -128,7 +129,49 @@ def _co_moved(repo_root: Path, ack_commit: str | None, doc: str, changed_code: s
     return saw_code_change
 
 
-def check_pair(repo_root: Path, pair: ResolvedPair) -> PairReport:
+@dataclass
+class MentionContext:
+    """Precomputed repo facts for the anchor-weighted L1 (shared per run)."""
+
+    anchors_rule: object
+    all_files: set[str]
+    all_dirs: set[str]
+    path_roots: list[str]
+
+
+def _mentioned_changed(
+    repo_root: Path,
+    pair: ResolvedPair,
+    changed: set[str],
+    ctx: "MentionContext | None",
+) -> list[str]:
+    """Changed files this doc mentions — by path anchor, or because the file
+    contains an identifier the doc quotes. Deterministic (anchor extraction +
+    grep over the changed files only)."""
+    if ctx is None:
+        return []
+    mentioned, idents = anchors_mod.doc_mention_index(
+        repo_root, pair.doc, ctx.anchors_rule, ctx.all_files, ctx.all_dirs, ctx.path_roots
+    )
+    hits = set(changed) & mentioned
+    remaining = [f for f in sorted(changed - hits)]
+    if idents and remaining:
+        idx_files = [f for f in remaining if (repo_root / f).is_file()]
+        blob_index = CodeIndex(repo_root, idx_files)
+        # per-file grep: only flag files that actually contain a quoted identifier
+        for f in idx_files:
+            content = CodeIndex(repo_root, [f])
+            if any(content.contains(tok) for tok in idents):
+                hits.add(f)
+        _ = blob_index
+    return sorted(hits)
+
+
+def check_pair(
+    repo_root: Path,
+    pair: ResolvedPair,
+    mention_ctx: "MentionContext | None" = None,
+) -> PairReport:
     report = PairReport(
         doc=pair.doc,
         state=UNACKED,
@@ -178,7 +221,19 @@ def check_pair(repo_root: Path, pair: ResolvedPair) -> PairReport:
     if not code_changed and not report.doc_changed:
         report.state = GREEN
     elif code_changed and not report.doc_changed:
-        report.state = DOC_STALE
+        # anchor-weighted L1 (v0.2): the break is RED only when a changed file
+        # is one this doc actually mentions (by path anchor, or by containing a
+        # quoted identifier). Unrelated churn inside a wide pair downgrades to
+        # AMBER — "moved, but nothing this doc talks about" — so RED keeps its
+        # urgency and the reflexive-ack habit loses its fuel.
+        report.mentioned_changed = _mentioned_changed(repo_root, pair, changed, mention_ctx)
+        if report.mentioned_changed or mention_ctx is None:
+            report.state = DOC_STALE
+        else:
+            report.state = AMBER
+            report.detail = (
+                f"{len(changed)} file(s) moved, none referenced by this doc"
+            )
     elif report.doc_changed and not code_changed:
         report.state = CODE_LAG
     else:
@@ -197,8 +252,15 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         dead_pair_docs=mapping.dead_pair_docs,
     )
 
+    tracked_for_mentions = set(gitio.ls_files(repo_root))
+    mention_ctx = MentionContext(
+        anchors_rule=cfg.anchors,
+        all_files=tracked_for_mentions,
+        all_dirs=anchors_mod.dirs_of(tracked_for_mentions),
+        path_roots=cfg.anchors.path_roots,
+    )
     for pair in mapping.pairs:
-        result.pairs.append(check_pair(repo_root, pair))
+        result.pairs.append(check_pair(repo_root, pair, mention_ctx))
 
     # ledger entries whose doc vanished from the mapping (deleted or renamed)
     mapped_docs = {p.doc for p in mapping.pairs}

@@ -157,3 +157,37 @@ def test_standalone_doc_dead_path_still_flags(paired_repo):
     paired_repo.commit("runbook")
     result = _check(paired_repo)
     assert "src/gone/thing.py" in [f.token for f in result.anchor_findings]
+
+
+def test_unrelated_churn_downgrades_to_amber(paired_repo):
+    # docs/auth.md は issue_token と token.py にしか言及していない。 session.py だけが
+    # 動いた場合は「言及対象は無傷」 なので amber (= 反射 ack の燃料を断つ)。
+    _ack_all(paired_repo)
+    paired_repo.write("src/auth/session.py", "def open_session():\n    return 2\n")
+    paired_repo.commit("unrelated churn", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.AMBER
+    assert "none referenced" in report.detail
+
+
+def test_mentioned_path_change_stays_red(paired_repo):
+    _ack_all(paired_repo)
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v2'\n")
+    paired_repo.commit("mentioned file", "src/auth/token.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.DOC_STALE
+    assert report.mentioned_changed == ["src/auth/token.py"]
+
+
+def test_quoted_identifier_in_changed_file_stays_red(paired_repo):
+    # session.py 自体は docs に言及されないが、 docs が引用する識別子 issue_token を
+    # 含む形に変わった → docs の語ってる対象が動いたとみなして red。
+    _ack_all(paired_repo)
+    paired_repo.write(
+        "src/auth/session.py",
+        "from .token import issue_token\n\ndef open_session():\n    return issue_token()\n",
+    )
+    paired_repo.commit("now touches issue_token", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.DOC_STALE
+    assert report.mentioned_changed == ["src/auth/session.py"]
