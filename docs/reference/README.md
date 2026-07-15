@@ -102,6 +102,11 @@ be non-empty but is not content-checked (an onboarding baseline has no
 single evidence to name). The `Staledocs-Ack:` commit trailer is untouched —
 that path stays the human shortcut for fix-code-and-doc-together commits.
 
+Trailer resolution walks the history after the acked commit; when that
+commit is unknown to the clone (a squash merge discarded the branch tip it
+was recorded on), the scan falls back to the full history rather than going
+blind. A shallow clone has no history to scan — fetch full history in CI.
+
 Exit codes: `0` ok, `1` gate failure / error, `2` usage error, `3` pending
 confirmation.
 

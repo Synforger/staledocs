@@ -99,12 +99,18 @@ def _effective_ack(
 
     Returns the effective ack plus the commit sha it was absorbed from (for
     reporting), or the original ack unchanged.
+
+    When the recorded commit is unknown to this clone (acked on a branch tip
+    that a squash merge later discarded, or lost to a shallow fetch), the
+    trailer scan falls back to the full history instead of going blind —
+    otherwise every such pair reads BROKEN on CI while local checks pass.
     """
-    if ack.commit is None or not gitio.commit_exists(repo_root, ack.commit):
-        return ack, None
+    since: str | None = ack.commit
+    if since is not None and not gitio.commit_exists(repo_root, since):
+        since = None
     absorbed_from: str | None = None
     effective = ack
-    for commit in gitio.commits_since(repo_root, ack.commit):
+    for commit in gitio.commits_since(repo_root, since):
         if commit.sha == gitio.WORKTREE:
             continue
         if not commit.trailer_acks:

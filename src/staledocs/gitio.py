@@ -89,9 +89,11 @@ class Commit:
 WORKTREE = "WORKTREE"
 
 
-def commits_since(repo_root: Path, since_sha: str) -> list[Commit]:
+def commits_since(repo_root: Path, since_sha: str | None) -> list[Commit]:
     """Commits after `since_sha` up to HEAD (oldest first), with touched files
-    and any `Staledocs-Ack:` trailer values.
+    and any `Staledocs-Ack:` trailer values. `since_sha=None` walks the full
+    history — the fallback when an ack anchors to a commit this clone does
+    not have (a squash-merged branch tip, or a shallow fetch).
 
     A pseudo-commit `WORKTREE` is appended last, carrying uncommitted changes
     (staged + unstaged + untracked) so the co-movement rule treats "edited
@@ -104,7 +106,7 @@ def commits_since(repo_root: Path, since_sha: str) -> list[Commit]:
         "--reverse",
         "--name-only",
         f"--format=%x01%H%x02%(trailers:key={ACK_TRAILER},valueonly=true,separator=%x03)",
-        f"{since_sha}..HEAD",
+        f"{since_sha}..HEAD" if since_sha else "HEAD",
     )
     current: Commit | None = None
     for line in out.splitlines():
