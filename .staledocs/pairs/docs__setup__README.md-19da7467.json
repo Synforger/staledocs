@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-15T18:43:47+00:00",
+    "at": "2026-07-15T18:47:23+00:00",
     "code_blobs": {
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
-      "src/staledocs/config.py": "010838e78b9d45339bb6c279ae63b8f4bc9f245e"
+      "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681"
     },
-    "commit": "08905d37e318208a9e62ec8d92670fd74a982248",
+    "commit": "f62df76f065a2c0d0bab7599b0133434004d047c",
     "doc_blob": "bde2cf8142f7dd0427bd6e917873b502591fe1c7",
-    "note": "verified: setup README flow unaffected by config.py branch_prefixes default (scaffold comment only)"
+    "note": "verified docs/setup/README.md against anchors.py glob-ignore change: docs rows updated where README.md documents the ignore semantics, agent surface unchanged (keys untouched)"
   },
   "doc": "docs/setup/README.md",
   "schema": 1

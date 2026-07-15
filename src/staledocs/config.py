@@ -224,7 +224,7 @@ global:
 
 anchors:
   min_length: 3
-  ignore: []       # exact tokens to skip
+  ignore: []       # tokens to skip (exact; entries with * ? [ also act as globs)
   include_fenced: false
   path_roots: []   # extra prefixes for resolving doc-quoted paths (e.g. [src])
   # quoted branch names (feature/dark-mode) are not paths; first segments

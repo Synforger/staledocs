@@ -313,3 +313,25 @@ def test_tracked_path_under_branch_prefix_dir_still_verifies(tmp_path: Path):
         branch_prefixes=["feature"],
     )
     assert findings == []
+
+
+def test_ignore_entry_with_glob_chars_covers_the_family(tmp_path: Path):
+    rule = AnchorRule(min_length=3, ignore=["research/*"])
+    text = "See `research/01-intro.md` and `research/10-close.md`.\n"
+    found = anchors.extract("d.md", text, rule)
+    assert found == []
+
+
+def test_ignore_glob_entry_still_suppresses_its_own_literal_token(tmp_path: Path):
+    # an entry written as an exact token before glob support existed must
+    # keep suppressing the literal token itself (exact stage runs first)
+    rule = AnchorRule(min_length=3, ignore=["com.example.*"])
+    found = anchors.extract("d.md", "Bundle id prefix `com.example.*` is ours.\n", rule)
+    assert found == []
+
+
+def test_ignore_literal_entry_stays_exact(tmp_path: Path):
+    # no glob characters -> exact only; a sibling token is still extracted
+    rule = AnchorRule(min_length=3, ignore=["issue_token"])
+    found = anchors.extract("d.md", "`issue_token` and `open_session` here.\n", rule)
+    assert [a.token for a in found] == ["open_session"]

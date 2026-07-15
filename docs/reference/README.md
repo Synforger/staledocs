@@ -18,7 +18,7 @@
 | `standalone` | globs | `[]` | docs with intentionally no code side |
 | `global` | globs | `[]` | whole-repo docs: anchors only, no ledger |
 | `anchors.min_length` | int | `3` | shortest token considered an anchor |
-| `anchors.ignore` | strings | `[]` | exact tokens to skip |
+| `anchors.ignore` | strings | `[]` | tokens to skip: an entry matches its own literal token always; entries containing `*` `?` `[` also match as fnmatch globs (`research/*` covers the family in one line) |
 | `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks |
 | `anchors.path_roots` | paths | `[]` | extra prefixes tried when resolving doc-quoted paths (docs describing a deployed subtree, e.g. `[src]`) |
 | `anchors.branch_prefixes` | strings | `[feature, fix, hotfix, release, chore, origin]` | quoted git branch names are not paths: a slash token starting with one of these skips path verification when no such tracked path exists; `[]` disables |

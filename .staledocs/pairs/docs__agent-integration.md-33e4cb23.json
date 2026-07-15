@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T18:43:47+00:00",
+    "at": "2026-07-15T18:47:22+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "4e6223d785d59ea5254413de84c77d464eda4d83",
+      "docs/reference/README.md": "cade48212126c4853618a30522c5a9ce61ca53dd",
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
       "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
       "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf"
     },
-    "commit": "08905d37e318208a9e62ec8d92670fd74a982248",
+    "commit": "f62df76f065a2c0d0bab7599b0133434004d047c",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "verified: engine.py/cli.py surface unchanged for agents \u2014 branch_prefixes only removes false-positive reds; JSON keys only added"
+    "note": "verified docs/agent-integration.md against anchors.py glob-ignore change: docs rows updated where README.md documents the ignore semantics, agent surface unchanged (keys untouched)"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

@@ -36,6 +36,8 @@ global:
 anchors:
   min_length: 3
   ignore:
+    # config example quoted in the reference's anchors.ignore row
+    - "research/*"
     # git branch patterns quoted in docs/internals/branch-protection.md —
     # slash syntax without being repo paths
     - "*/[dm][ea][vi][!o]*"
