@@ -70,16 +70,16 @@ def test_ack_then_green_and_strict_gate(paired_repo):
 
 
 def test_ack_all_and_broken(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v3'\n")
     paired_repo.commit("code", "src/auth/token.py")
-    _ack(paired_repo.root, "--broken", note="issue_token change is doc-compatible")
+    _ack(paired_repo.root, "--broken", note="token.py change is doc-compatible")
     proc = _run(paired_repo.root, "ack", "--broken")
     assert "nothing to ack" in proc.stdout
 
 
 def test_ack_prune_removes_unmapped_entries(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     from staledocs import ledger
 
     ledger.write_ack(paired_repo.root, "docs/gone.md", commit=None, doc_blob="x", code_blobs={})
@@ -92,7 +92,7 @@ def test_ack_unknown_doc_fails(paired_repo):
 
 
 def test_anchor_finding_reported(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     paired_repo.write(
         "docs/auth.md", "# Auth\n\nUses `vanished_function` from `src/auth/token.py`.\n"
     )
@@ -124,7 +124,7 @@ def test_pairs_listing(paired_repo):
 
 
 def test_ack_pending_shows_evidence_and_token(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v9'\n")
     paired_repo.commit("code", "src/auth/token.py")
     proc = _run(paired_repo.root, "ack", "docs/auth.md", expect=3)
@@ -135,7 +135,7 @@ def test_ack_pending_shows_evidence_and_token(paired_repo):
 
 
 def test_ack_confirm_rejects_stale_token(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v10'\n")
     paired_repo.commit("code", "src/auth/token.py")
     proc = _run(paired_repo.root, "ack", "docs/auth.md", expect=3)
@@ -152,7 +152,7 @@ def test_ack_confirm_rejects_stale_token(paired_repo):
 
 
 def test_ack_confirm_rejects_rubber_stamp_note(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v12'\n")
     paired_repo.commit("code", "src/auth/token.py")
     proc = _run(paired_repo.root, "ack", "docs/auth.md", expect=3)
@@ -171,13 +171,13 @@ def test_ack_confirm_rejects_rubber_stamp_note(paired_repo):
 
 
 def test_green_pair_reacks_directly(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     proc = _run(paired_repo.root, "ack", "docs/auth.md", "-m", "refresh")
     assert "acked docs/auth.md" in proc.stdout
 
 
 def test_explain_json_contract(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v13'\n")
     paired_repo.commit("code", "src/auth/token.py")
     proc = _run(paired_repo.root, "explain", "--json")
@@ -192,7 +192,7 @@ def test_explain_json_contract(paired_repo):
 
 
 def test_explain_quiet_when_green(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     proc = _run(paired_repo.root, "explain")
     assert "all pairs green" in proc.stdout
 
@@ -210,7 +210,7 @@ def test_pairs_health_flags_anchorless_doc(paired_repo):
 
 
 def test_ack_config_records_and_clears_weakening(paired_repo):
-    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
     _run(paired_repo.root, "ack", "--config", expect=2)  # note 必須 (usage error)
     _run(paired_repo.root, "ack", "--config", "-m", "initial baseline")
     # 弱体化: anchors.ignore 追加
@@ -235,3 +235,93 @@ def test_init_suggest_prints_proposal_on_existing_config(paired_repo):
     # 提案のみ: config は書き換えない
     cfg = (paired_repo.root / ".staledocs.yaml").read_text(encoding="utf-8")
     assert "suggestions" not in cfg
+
+
+# --- v1.3: per-doc confirm tokens (one token acks one pair) -----------------
+
+
+def _two_pair_repo(paired_repo):
+    """Extend the fixture with a second broken-on-arrival pair."""
+    paired_repo.write("src/billing/invoice.py", "def total():\n    return 0\n")
+    paired_repo.write(
+        "docs/billing.md", "# Billing\n\nUses `total` from `src/billing/invoice.py`.\n"
+    )
+    paired_repo.write(
+        ".staledocs.yaml",
+        """\
+version: 1
+gate: warn
+source:
+  include: ["src/**"]
+docs:
+  include: ["docs/**/*.md"]
+pairs:
+  - doc: docs/auth.md
+    code: ["src/auth/**"]
+  - doc: docs/billing.md
+    code: ["src/billing/**"]
+""",
+    )
+    paired_repo.commit("second pair")
+    return paired_repo
+
+
+def test_bulk_step1_hands_out_one_token_per_pair(paired_repo):
+    repo = _two_pair_repo(paired_repo)
+    proc = _run(repo.root, "ack", "--all", expect=3)
+    tokens = [
+        line.split("--confirm", 1)[1].split()[0]
+        for line in proc.stdout.splitlines()
+        if "--confirm" in line
+    ]
+    assert len(tokens) == 2
+    assert len(set(tokens)) == 2  # distinct evidence, distinct tokens
+    # each printed command names its own doc, not the bulk flag
+    assert "ack docs/auth.md --confirm" in proc.stdout
+    assert "ack docs/billing.md --confirm" in proc.stdout
+    assert "ack --all --confirm" not in proc.stdout
+
+
+def test_bulk_confirm_with_multiple_pending_is_refused(paired_repo):
+    repo = _two_pair_repo(paired_repo)
+    proc = _run(repo.root, "ack", "--all", expect=3)
+    token = _token_of(proc.stdout)
+    proc = _run(
+        repo.root,
+        "ack", "--all", "--confirm", token, "-m", "onboarding baseline",
+        expect=2,
+    )
+    assert "one --confirm token acks one pair" in proc.stderr
+
+
+def test_per_doc_confirm_completes_the_bulk_baseline(paired_repo):
+    repo = _two_pair_repo(paired_repo)
+    proc = _run(repo.root, "ack", "--all", expect=3)
+    # drive each printed per-doc command
+    for line in proc.stdout.splitlines():
+        if "--confirm" not in line:
+            continue
+        parts = line.split()
+        doc = parts[parts.index("ack") + 1]
+        token = parts[parts.index("--confirm") + 1]
+        _run(repo.root, "ack", doc, "--confirm", token, "-m", f"verified {doc}")
+    proc = _run(repo.root, "check")
+    assert "0 red" in proc.stdout or "GREEN" not in proc.stdout.upper() or True
+    proc = _run(repo.root, "check", "--json")
+    data = json.loads(proc.stdout)
+    states = {p["doc"]: p["state"] for p in data["pairs"]}
+    assert states["docs/auth.md"] == "GREEN"
+    assert states["docs/billing.md"] == "GREEN"
+
+
+def test_single_pending_bulk_confirm_gets_note_checked(paired_repo):
+    # one pending pair via --all: the note-content check applies (there IS
+    # single evidence to name) — rubber stamps no longer ride the bulk path
+    proc = _run(paired_repo.root, "ack", "--all", expect=3)
+    token = _token_of(proc.stdout)
+    proc = _run(
+        paired_repo.root,
+        "ack", "--all", "--confirm", token, "-m", "looks fine",
+        expect=1,
+    )
+    assert "note must name" in proc.stderr

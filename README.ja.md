@@ -92,8 +92,8 @@ cd your-repo
 staledocs init --suggest  # 生成 + docs のアンカーから pairs 案を印字
 $EDITOR .staledocs.yaml   # 案をレビューして貼る (書き下ろし不要)
 staledocs check           # 未所有 / 未 ack を確認
-staledocs ack --all       # 基準線 1 段目: 証拠 + トークン表示 (exit 3)
-staledocs ack --all --confirm <token> -m 'onboarding baseline'
+staledocs ack --all       # 1 段目: 全 pending pair の証拠 + pair ごとのトークン (exit 3)
+staledocs ack <doc> --confirm <token> -m '<検証した内容>'   # pair ごとに 1 回
 ```
 
 以降の日常:

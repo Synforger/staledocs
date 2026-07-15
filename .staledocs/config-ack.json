@@ -27,7 +27,7 @@
       "src/**"
     ]
   },
-  "at": "2026-07-15T17:37:23+00:00",
-  "note": "docs scope widened to every tracked .md (root *.md via glob, docs/internals, .github) \u2014 README entries subsumed by *.md, not dropped; staledocs now sole owner of path/anchor liveness (docs-check axis A retired)",
+  "at": "2026-07-15T18:30:26+00:00",
+  "note": "advanced by pair ack (no weakening)",
   "schema": 1
 }
