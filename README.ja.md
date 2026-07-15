@@ -37,6 +37,12 @@ staledocs は「覚えておく」を不要にする。すべての文書を、�
 CI でやり、staledocs は宣言漏れの例ブロックと runner 配線の外し (= config
 弱体化として記録) を見張る。staledocs 自身は何も実行しない。
 
+計画書の未来参照に専用マーカーはない: まだ存在しない path の引用は腐った
+path と同じ red になる (計画と死骸は区別できない)。運用は 3 択 — 計画レイ
+アウトは fence 内に書く (= 既定で抽出されない) / 計画 doc を docs スコープ
+に入れない / ペアにした仕様書がコード先行するのは `CODE_LAG` として設計済み
+(= 「仕様先行」と ack する)。仕分け表は docs/setup 参照。
+
 ## 使用用途
 
 - **AI エージェント開発のガードレール**: エージェントの変更速度に docs は
@@ -92,8 +98,8 @@ cd your-repo
 staledocs init --suggest  # 生成 + docs のアンカーから pairs 案を印字
 $EDITOR .staledocs.yaml   # 案をレビューして貼る (書き下ろし不要)
 staledocs check           # 未所有 / 未 ack を確認
-staledocs ack --all       # 基準線 1 段目: 証拠 + トークン表示 (exit 3)
-staledocs ack --all --confirm <token> -m 'onboarding baseline'
+staledocs ack --all       # 1 段目: 全 pending pair の証拠 + pair ごとのトークン (exit 3)
+staledocs ack <doc> --confirm <token> -m '<検証した内容>'   # pair ごとに 1 回
 ```
 
 以降の日常:

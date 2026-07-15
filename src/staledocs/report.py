@@ -42,6 +42,13 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
 
     for doc in result.dead_pair_docs:
         lines.append(red(f"[mapping] pair doc does not exist: {doc}"))
+    for entry in result.out_of_scope_pair_code:
+        lines.append(
+            red(
+                f"[mapping] pair code entry matches only files outside "
+                f"source/docs scope (widen the include, or drop the entry): {entry}"
+            )
+        )
     for doc in result.unclassified_docs:
         lines.append(
             red(f"[coverage] doc not classified (pair it, or declare standalone/global): {doc}")
@@ -96,6 +103,17 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
 
     for f in result.anchor_findings:
         lines.append(red(f"[anchor] {f.doc}:{f.line} `{f.token}` not found in {f.scope} scope"))
+    if result.anchor_findings:
+        # the map is handed out at the moment of stepping, not buried in docs:
+        # a missing anchor is either rot or a reference to something not built
+        # yet, and the two have different correct moves
+        lines.append(
+            dim(
+                "      (rotted, or not built yet? rot -> fix the doc; planned -> "
+                "fence it, keep the plan doc out of scope, or anchors.ignore it "
+                "until it lands — triage table: docs/setup)"
+            )
+        )
 
     if result.examples is not None and result.examples.enabled:
         for block in result.examples.undeclared:
@@ -164,6 +182,7 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "orphan_pairs": result.orphan_pairs,
             "uncovered_source": result.uncovered_source,
             "dead_pair_docs": result.dead_pair_docs,
+            "out_of_scope_pair_code": result.out_of_scope_pair_code,
             "stale_ledger_docs": result.stale_ledger_docs,
         },
         "config": {

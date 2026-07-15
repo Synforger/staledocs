@@ -106,3 +106,33 @@ def test_nm_mapping_one_file_two_docs():
     r = resolve(cfg, FILES)
     owners = [p.doc for p in r.pairs if "src/auth/session.py" in p.code_files]
     assert sorted(owners) == ["docs/auth.md", "docs/ops/runbook.md"]
+
+
+def test_out_of_scope_pair_code_is_flagged():
+    # scripts/deploy.sh is tracked but matches neither source nor docs scope:
+    # the pair silently covers less than declared — must surface, not drop
+    cfg = _cfg(pairs=[PairRule(doc="docs/auth.md", code=["src/auth/**", "scripts/**"])])
+    files = FILES + ["scripts/deploy.sh"]
+    r = resolve(cfg, files)
+    assert r.out_of_scope_pair_code == ["docs/auth.md: scripts/**"]
+    # the in-scope part of the pair still resolves normally
+    pair = next(p for p in r.pairs if p.doc == "docs/auth.md")
+    assert pair.code_files == ["src/auth/session.py", "src/auth/token.py"]
+
+
+def test_pattern_matching_nothing_tracked_is_not_out_of_scope():
+    # a glob that matches no tracked file at all is the orphan/dead territory,
+    # not an out-of-scope finding (nothing was silently dropped)
+    cfg = _cfg(pairs=[PairRule(doc="docs/auth.md", code=["future/**"])])
+    r = resolve(cfg, FILES)
+    assert r.out_of_scope_pair_code == []
+    assert "docs/auth.md" in r.orphan_pairs
+
+
+def test_doc_itself_on_code_side_is_not_out_of_scope():
+    # self-reference is dropped as degenerate, not reported as out of scope
+    cfg = _cfg(
+        pairs=[PairRule(doc="docs/auth.md", code=["docs/auth.md", "src/auth/**"])]
+    )
+    r = resolve(cfg, FILES)
+    assert r.out_of_scope_pair_code == []

@@ -1,18 +1,30 @@
 {
   "accepted": {
     "anchors": {
-      "ignore": [],
+      "branch_prefixes": [
+        "chore",
+        "feature",
+        "fix",
+        "hotfix",
+        "origin",
+        "release"
+      ],
+      "ignore": [
+        "*/[dm][ea][vi][!o]*",
+        "feature/main",
+        "hotfix/develop",
+        "research/*"
+      ],
       "include_fenced": false,
       "min_length": 3
     },
-    "docs_exclude": [
-      "docs/internals/**"
-    ],
+    "docs_exclude": [],
     "docs_include": [
-      "README.ja.md",
-      "README.md",
+      "*.md",
+      ".github/**/*.md",
       "docs/**/*.md"
     ],
+    "examples_wired": [],
     "gate": "strict",
     "pair_docs": [
       "docs/agent-integration.md",
@@ -24,7 +36,7 @@
       "src/**"
     ]
   },
-  "at": "2026-07-15T07:09:40+00:00",
+  "at": "2026-07-15T19:24:46+00:00",
   "note": "advanced by pair ack (no weakening)",
   "schema": 1
 }

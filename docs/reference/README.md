@@ -18,9 +18,10 @@
 | `standalone` | globs | `[]` | docs with intentionally no code side |
 | `global` | globs | `[]` | whole-repo docs: anchors only, no ledger |
 | `anchors.min_length` | int | `3` | shortest token considered an anchor |
-| `anchors.ignore` | strings | `[]` | exact tokens to skip |
-| `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks |
+| `anchors.ignore` | strings | `[]` | tokens to skip: an entry matches its own literal token always; entries containing `*` `?` `[` also match as fnmatch globs (`research/*` covers the family in one line) |
+| `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks. The `false` default is also the escape hatch for planned layouts: a future path quoted inside a fence is not extracted, so plans drawn in code blocks never red |
 | `anchors.path_roots` | paths | `[]` | extra prefixes tried when resolving doc-quoted paths (docs describing a deployed subtree, e.g. `[src]`) |
+| `anchors.branch_prefixes` | strings | `[feature, fix, hotfix, release, chore, origin]` | quoted git branch names are not paths: a slash token starting with one of these skips path verification when no such tracked path exists; `[]` disables |
 | `examples` | map | `{}` (layer off) | executable-docs layer: fence tag → runner command that executes those blocks in your test suite, or `none` (display-only). staledocs never executes anything — it inventories the blocks, and any fenced block whose tag is unclassified is a yellow finding. Unwiring a runner (mapping → `none` or removal) counts as a config weakening |
 
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
@@ -56,7 +57,10 @@ quote paths and identifiers to earn the amber downgrade.
 
 Also red: anchor findings, `uncovered_source`, `unclassified_docs`,
 `orphan_pairs` (pair globs match no code), `dead_pair_docs` (pair doc path
-does not exist), config weakenings (see below). `stale_ledger_docs` (ledger
+does not exist), `out_of_scope_pair_code` (a pair `code:` entry matches only
+tracked files outside the source/docs scope — the pair silently covers less
+than declared; widen the include or drop the entry), config weakenings (see
+below). `stale_ledger_docs` (ledger
 entry for an unmapped doc) is reported but yellow — clean up with
 `staledocs ack --prune`.
 
@@ -67,7 +71,8 @@ Weakening the checks is itself a checked event. `check` compares the current
 (`.staledocs/config-ack.json`) and reds every weakening direction: gate
 `strict` → `warn`, a pair removed, `source.include` dropped or
 `source.exclude` added (scope narrowed), same for docs scope,
-`anchors.min_length` raised, `anchors.ignore` grown, `include_fenced`
+`anchors.min_length` raised, `anchors.ignore` grown, `branch_prefixes`
+grown, `include_fenced`
 switched off. Strengthening directions never fire.
 
 Accept a deliberate weakening with `staledocs ack --config -m '<why>'` —
@@ -98,9 +103,11 @@ A broken pair does not ack in one shot:
    the evidence: a changed file, a quoted anchor, or the doc itself.
 
 Green pairs re-ack directly (nothing to verify). Bulk paths (`--all`,
-`--broken`) use the same two steps with one aggregate token; their note must
-be non-empty but is not content-checked (an onboarding baseline has no
-single evidence to name). The `Staledocs-Ack:` commit trailer is untouched —
+`--broken`) batch only step 1: one run prints every pending pair's evidence
+with its own token, and each pair is then confirmed individually (one token
+acks one pair — a single token that unlocked N pairs would let an unread doc
+ride through on a note about a different one). The note-content check
+applies to every confirm. The `Staledocs-Ack:` commit trailer is untouched —
 that path stays the human shortcut for fix-code-and-doc-together commits.
 
 Trailer resolution walks the history after the acked commit; when that
@@ -148,7 +155,7 @@ confirmation.
   ],
   "coverage": {
     "unclassified_docs": [], "orphan_pairs": [], "uncovered_source": [],
-    "dead_pair_docs": [], "stale_ledger_docs": []
+    "dead_pair_docs": [], "out_of_scope_pair_code": [], "stale_ledger_docs": []
   },
   "config": { "weakenings": [], "baseline_missing": false },
   "examples": {                       // null when the layer is off
