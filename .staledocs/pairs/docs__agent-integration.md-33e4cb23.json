@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T19:15:35+00:00",
+    "at": "2026-07-15T19:35:57+00:00",
     "code_blobs": {
       "docs/reference/README.md": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
-      "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
+      "src/staledocs/engine.py": "b038d03aba5fc60a81841715c63a49d803f97ad9",
       "src/staledocs/report.py": "a334ecddd1b6d2ebc9a6dd40059ca1b7ab2159c4"
     },
-    "commit": "06073de32d619f47063b767477ff2ddab661ac25",
+    "commit": "bbf449a2bd8f3b85ddad946b7ebcb9384393486a",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "report.py hint is human-output only; the JSON contract cli.py serves agents is untouched"
+    "note": "engine.py/gitio.py ancestry filter only narrows which trailer commits advance the baseline; the agent-facing trailer contract in the doc is unchanged"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

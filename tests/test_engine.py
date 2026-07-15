@@ -545,3 +545,36 @@ def test_examples_scan_ignores_closing_fences_and_untagged(repo):
         "```python\ncode\n```\n\n```\nplain\n```\n\n~~~sh\nx\n~~~\n",
     )
     assert [(b.tag, b.line) for b in blocks] == [("python", 1), ("sh", 9)]
+
+
+def test_old_trailer_on_parallel_leg_does_not_roll_back_the_baseline(paired_repo):
+    # merge topology + squash-era trailer: a leg joined by a merge carries an
+    # OLD Staledocs-Ack (a past release commit). `since..HEAD` surfaces that
+    # leg, but only a descendant of the acked commit may advance the baseline
+    # — absorbing the old trailer would roll the pair back to a stale state.
+    base = paired_repo.git("rev-parse", "HEAD").strip()
+
+    # parallel leg: an old trailer ack recorded when the doc was older
+    paired_repo.git("checkout", "-b", "legacy", base, "--quiet")
+    paired_repo.root.joinpath("msg").write_text(
+        "old release\n\nStaledocs-Ack: docs/auth.md\n", encoding="utf-8"
+    )
+    paired_repo.write("legacy-note.txt", "x\n")
+    paired_repo.git("add", "-A")
+    paired_repo.git("commit", "-F", "msg", "--no-verify", "--quiet")
+    (paired_repo.root / "msg").unlink()
+
+    # mainline: doc and code evolve together, then a fresh CLI ack
+    paired_repo.git("checkout", "main", "--quiet")
+    paired_repo.write("src/auth/token.py", "def issue_token(ttl=90):\n    return 'tok'\n")
+    paired_repo.write("docs/auth.md", "# Auth\n\nTTL 90 documented in `src/auth/token.py`.\n")
+    paired_repo.commit("evolve both")
+    _ack_all(paired_repo)
+
+    # the merge joins the legacy leg into mainline history
+    paired_repo.git("merge", "legacy", "--no-ff", "--no-verify", "--quiet",
+                    "-m", "join legacy leg")
+
+    report = _pair_state(paired_repo)
+    assert report.state == engine.GREEN  # ledger ack stands; old trailer skipped
+    assert "trailer" not in (report.detail or "")
