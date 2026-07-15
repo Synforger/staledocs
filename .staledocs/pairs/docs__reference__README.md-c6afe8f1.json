@@ -1,21 +1,21 @@
 {
   "ack": {
-    "at": "2026-07-12T21:47:11+00:00",
+    "at": "2026-07-15T07:09:40+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "07eda25f8ee2188654005b1627a7dca3bad6a34f",
-      "src/staledocs/anchors.py": "bff281dd9f8b68ee8c93609e2c92a94313b089d9",
-      "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
+      "src/staledocs/__init__.py": "bef3dc5167e307ac95b1b35e93a2d01c333f4eb8",
+      "src/staledocs/anchors.py": "2f4b6911a05c2a618e32fda5df298432cc360ac1",
+      "src/staledocs/cli.py": "52f378ed1d5c08e280bb3aa241e279bce54990c1",
       "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3",
-      "src/staledocs/engine.py": "2012cd3bf1fde87d251f8cbd5b0aad5e00de6d9d",
-      "src/staledocs/gitio.py": "697673cdfc47031472cd114dfe5c299dac6b1c0c",
+      "src/staledocs/engine.py": "f120ccddf65c4eb1ccc431a82878803730930e87",
+      "src/staledocs/gitio.py": "9fdbbfd8d35abb6a96562bfcce972945011005c3",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
-      "src/staledocs/ledger.py": "e61438d9ac2c99badb99f1dc8ddfc351de58b78e",
+      "src/staledocs/ledger.py": "e32cb04970aaaf28b368a1676a1baede26e2106a",
       "src/staledocs/mapping.py": "73a6cdae305c610708eadba0614f59b8f8e9961c",
-      "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
+      "src/staledocs/report.py": "cd2f4f666005f6af63c4b946700cde25fa3ba48c"
     },
-    "commit": "cc45d835c11ed83befffc84759afc30d2ad3d45d",
-    "doc_blob": "e6a319eae2c6ae1e67c28b90ea7a33b3e4191d36",
-    "note": "0.1.6 bump"
+    "commit": "e99a2e5f09d6cbfa9c75fb6ce3fc4c9284ab60da",
+    "doc_blob": "49229a8ced8c8c96f805573b94c3743744fa082b",
+    "note": "v0.2 rewrite: cli.py/engine.py/report.py two-step ack + explain + config baseline, docs updated in this worktree"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
