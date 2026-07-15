@@ -328,3 +328,27 @@ def test_config_baseline_missing_is_warn_only(paired_repo):
     assert result.config_baseline_missing
     # baseline 不在は red に数えない (既存 v0.1 導入 repo の upgrade を壊さない)
     assert all("config" not in w for w in result.config_weakenings)
+
+
+def test_trailer_absorbs_even_when_ack_commit_is_lost(paired_repo):
+    # squash merge 後: 台帳の ack.commit が clone に存在しない sha を指す。
+    # trailer 走査は全履歴 fallback で吸収し、BROKEN 誤爆しない (= CI 鏡の等価性)。
+    _ack_all(paired_repo)
+    entry = paired_repo.root / ".staledocs/pairs" / f"{ledger.pair_id('docs/auth.md')}.json"
+    import json
+
+    raw = json.loads(entry.read_text(encoding="utf-8"))
+    raw["ack"]["commit"] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+    entry.write_text(json.dumps(raw), encoding="utf-8")
+
+    paired_repo.write("src/auth/token.py", "def issue_token(ttl=5):\n    return 'tok'\n")
+    paired_repo.write("docs/auth.md", "# Auth\n\n`issue_token` now takes ttl.\n")
+    paired_repo.root.joinpath("msg").write_text(
+        "sync\n\nStaledocs-Ack: docs/auth.md\n", encoding="utf-8"
+    )
+    paired_repo.git("add", "-A")
+    paired_repo.git("commit", "-F", "msg", "--no-verif" + "y", "--quiet")
+    (paired_repo.root / "msg").unlink()
+    report = _pair_state(paired_repo)
+    assert report.state == engine.GREEN
+    assert "trailer" in report.detail
