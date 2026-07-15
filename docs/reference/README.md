@@ -102,6 +102,14 @@ A broken pair does not ack in one shot:
    step 1, the confirm is refused), and the note must name something from
    the evidence: a changed file, a quoted anchor, or the doc itself.
 
+**First ack (UNACKED)**: with no baseline there is no diff to intersect,
+so the evidence becomes the doc's **own claims** — every path and identifier
+it quotes, with doc lines — and the note must name one of those claims (the
+doc's or a file's bare name is refused; a doc with no claims at all falls
+back to the doc name, and `pairs --health` flags it as ungradable anyway).
+The first stamp is a claims-verified stamp, not a diff-verified one, and
+says so in its detail line.
+
 Green pairs re-ack directly (nothing to verify). Bulk paths (`--all`,
 `--broken`) batch only step 1: one run prints every pending pair's evidence
 with its own token, and each pair is then confirmed individually (one token
@@ -168,7 +176,8 @@ confirmation.
 ```
 
 `staledocs explain --json` returns the same evidence per broken pair plus a
-`token` field — the evidence token the two-step ack expects, so an agent can
+`token` field; UNACKED pairs carry a `claims` array (the doc's own quoted
+paths/identifiers with doc lines) instead of intersection `hits` — the evidence token the two-step ack expects, so an agent can
 go straight from reading the evidence to confirming.
 
 Compatibility promise: within a major version, keys are only added — never

@@ -281,6 +281,13 @@ def ack(
         if not note.strip():
             raise click.UsageError("confirming an ack requires a non-empty --note")
         if not engine.note_references_evidence(note, _report(pending[0])):
+            rep = _report(pending[0])
+            if rep.state == engine.UNACKED and rep.claims:
+                raise click.ClickException(
+                    "note must name one of the doc's own claims shown in the "
+                    "evidence (a quoted path or identifier) — the doc or file "
+                    "name alone is the vacuous stamp the first ack refuses"
+                )
             raise click.ClickException(
                 "note must name something from the evidence "
                 "(a changed file, a quoted anchor, or the doc)"

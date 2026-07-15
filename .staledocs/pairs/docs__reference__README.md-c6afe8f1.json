@@ -1,23 +1,23 @@
 {
   "ack": {
-    "at": "2026-07-15T20:16:50+00:00",
+    "at": "2026-07-15T20:24:54+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "344d46a5289a01e17bfb914a10a82da8c70e1e56",
       "src/staledocs/anchors.py": "ebcfdb07e5aeb7e4cce879d3bf67eb8e94189a04",
-      "src/staledocs/cli.py": "4b9526a009a6f2b67aec0ff3a6102700f86952a6",
+      "src/staledocs/cli.py": "7cb911f027ae8b69dd1be92049b62d5705c53e65",
       "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681",
-      "src/staledocs/engine.py": "b038d03aba5fc60a81841715c63a49d803f97ad9",
+      "src/staledocs/engine.py": "bdab5d50afab7ed1415c06cbb915710a1a4836d0",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
       "src/staledocs/gitio.py": "477c74d4351b9ba199ba4b57fb32675d6e8a8aed",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
       "src/staledocs/mapping.py": "a3b9785b5510a0e38b305d93a4072ace8299bbd0",
-      "src/staledocs/report.py": "e5e4152ae2ac64fad8806a48da933c8341e1acd2",
+      "src/staledocs/report.py": "de8089a300e166a02db1e6e16c9c447ee66401b8",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "3fac478d3131b99d67d841dcb5e3f453b57a1d84",
-    "doc_blob": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
-    "note": "verified docs/reference/README.md against cli.py/report.py: init now records the baseline itself, first ack --config wording split from weakening approval; setup README.md onboarding step updated to match"
+    "commit": "f6072614f0cb7e762ded4c46d91c7997a6c31f89",
+    "doc_blob": "0860bcb8678e41f34f9bd4c4a69ad28ba9d19596",
+    "note": "README.md two-step section gains the first-ack claims paragraph matching engine.py's new UNACKED evidence; explain --json claims key documented"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
