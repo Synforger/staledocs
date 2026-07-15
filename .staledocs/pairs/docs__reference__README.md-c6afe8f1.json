@@ -1,6 +1,6 @@
 {
   "ack": {
-    "at": "2026-07-15T18:53:23+00:00",
+    "at": "2026-07-15T19:05:50+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "3ed1f8c6e36965a2b82bd7d449c83da7902f007e",
       "src/staledocs/anchors.py": "ebcfdb07e5aeb7e4cce879d3bf67eb8e94189a04",
@@ -15,9 +15,9 @@
       "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "b780ec76a48db6dbebd9538e485165025f336f4a",
-    "doc_blob": "cade48212126c4853618a30522c5a9ce61ca53dd",
-    "note": "anchors.py assignment-notation change verified: reference already documents the assignment fallback (viewMode='x' example); implementation now honors it for VAR=/abs/path tokens too, no doc statement changed"
+    "commit": "2f6f8d8e1689f286162a268ba4936d3e6a63d26f",
+    "doc_blob": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
+    "note": "include_fenced row in README.md now states the fence escape hatch for planned layouts \u2014 docs-only change, cli.py/config behavior untouched"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

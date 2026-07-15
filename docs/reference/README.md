@@ -19,7 +19,7 @@
 | `global` | globs | `[]` | whole-repo docs: anchors only, no ledger |
 | `anchors.min_length` | int | `3` | shortest token considered an anchor |
 | `anchors.ignore` | strings | `[]` | tokens to skip: an entry matches its own literal token always; entries containing `*` `?` `[` also match as fnmatch globs (`research/*` covers the family in one line) |
-| `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks |
+| `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks. The `false` default is also the escape hatch for planned layouts: a future path quoted inside a fence is not extracted, so plans drawn in code blocks never red |
 | `anchors.path_roots` | paths | `[]` | extra prefixes tried when resolving doc-quoted paths (docs describing a deployed subtree, e.g. `[src]`) |
 | `anchors.branch_prefixes` | strings | `[feature, fix, hotfix, release, chore, origin]` | quoted git branch names are not paths: a slash token starting with one of these skips path verification when no such tracked path exists; `[]` disables |
 | `examples` | map | `{}` (layer off) | executable-docs layer: fence tag → runner command that executes those blocks in your test suite, or `none` (display-only). staledocs never executes anything — it inventories the blocks, and any fenced block whose tag is unclassified is a yellow finding. Unwiring a runner (mapping → `none` or removal) counts as a config weakening |

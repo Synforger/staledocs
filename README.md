@@ -256,6 +256,13 @@ detect deterministically, generate nothing.
   cannot be graded and stays red on any code move — `pairs --health` lists
   these. The incentive points the right way: the more precisely a doc cites
   its subject, the more precisely it is protected.
+- **Planned references have no special marker.** A doc quoting a path that
+  does not exist *yet* reds like any rotted path — the tool cannot tell a
+  plan from a corpse. The working conventions: planned layouts go in
+  fenced code blocks (not extracted by default), plan documents stay out
+  of the docs scope, and a paired spec running ahead of the code is the
+  CODE_LAG state by design — ack it as "spec ahead". See the triage table
+  in [docs/setup](docs/setup/README.md).
 - **Thin-docs repos get thin value.** A repo with two Markdown files has
   little for the tool to guard. That is a property, not a defect — value
   scales with how much documentation you chose to have.

@@ -65,6 +65,7 @@ finding into one of four buckets; each has exactly one correct move:
 | not-an-identifier quote | git branch names, config-example snippets, tokens for another machine (`~/...`, other-repo paths) | `anchors.ignore` — one entry per token or a glob for a family, with a comment saying what it is |
 | scope gap | coverage/mapping findings: unclassified doc, uncovered source, pair code outside scope | widen `include`, or declare `standalone`/`global` — never shrink the source scope to silence it |
 | undeclared pair | a doc that clearly owns code but was never paired | add the pair, then two-step ack it |
+| planned reference | a plan/roadmap doc quotes a path or identifier that does not exist *yet* | put planned layouts in fenced code blocks (fences are not extracted by default), keep plan docs out of the docs scope entirely, or `anchors.ignore` the token until it lands — whichever matches how long the plan lives |
 
 Rules of thumb while sorting:
 
@@ -74,6 +75,11 @@ Rules of thumb while sorting:
   indistinguishable from a silenced finding.
 - **Re-run `staledocs check` after each bucket**, not at the end — the
   count dropping is how you notice a mis-sorted entry immediately.
+- **Plan docs and specs are different animals.** A spec you *pair* is
+  allowed to run ahead of the code — that is the CODE_LAG state, ack it as
+  "spec ahead, acknowledged". A free-floating plan doc that nobody will
+  keep in lockstep with the tree belongs outside the docs scope, with its
+  future paths in fences.
 
 ## When to flip warn → strict
 
