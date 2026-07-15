@@ -118,6 +118,12 @@ def _effective_ack(
             continue
         if not commit.trailer_acks:
             continue
+        # `since..HEAD` also surfaces parallel legs a merge joined in — under
+        # squash releases those legs carry OLD trailers (a past release
+        # commit), and absorbing one would roll the baseline back. Only a
+        # trailer on a descendant of the acked commit can advance it.
+        if since is not None and not gitio.is_ancestor(repo_root, since, commit.sha):
+            continue
         if "all" in commit.trailer_acks or pair.doc in commit.trailer_acks:
             doc_blob = gitio.blob_at_commit(repo_root, commit.sha, pair.doc)
             if doc_blob is None:
