@@ -20,6 +20,21 @@ def _run(repo_root: Path, *args: str, expect: int = 0) -> subprocess.CompletedPr
     return proc
 
 
+def _token_of(pending_stdout: str) -> str:
+    """The evidence token from a pending (step-1) ack run."""
+    for line in pending_stdout.splitlines():
+        if "--confirm" in line:
+            return line.split("--confirm", 1)[1].split()[0]
+    raise AssertionError(f"no token in output:\n{pending_stdout}")
+
+
+def _ack(repo_root: Path, *names: str, note: str = "verified") -> None:
+    """Drive the full two-step ack for broken pairs (test convenience)."""
+    proc = _run(repo_root, "ack", *names, expect=3)
+    token = _token_of(proc.stdout)
+    _run(repo_root, "ack", *names, "--confirm", token, "-m", note)
+
+
 def test_init_scaffolds_config_and_ledger(repo):
     repo.write("src/x.py", "pass\n")
     repo.commit("seed")
@@ -40,7 +55,7 @@ def test_check_json_contract(paired_repo):
 
 
 def test_ack_then_green_and_strict_gate(paired_repo):
-    _run(paired_repo.root, "ack", "docs/auth.md")
+    _ack(paired_repo.root, "docs/auth.md", note="baseline docs/auth.md")
     proc = _run(paired_repo.root, "check", "--json", "--gate", "strict")
     payload = json.loads(proc.stdout)
     assert payload["pairs"][0]["state"] == "GREEN"
@@ -55,17 +70,16 @@ def test_ack_then_green_and_strict_gate(paired_repo):
 
 
 def test_ack_all_and_broken(paired_repo):
-    _run(paired_repo.root, "ack", "--all")
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
     paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v3'\n")
     paired_repo.commit("code", "src/auth/token.py")
-    proc = _run(paired_repo.root, "ack", "--broken")
-    assert "docs/auth.md" in proc.stdout
+    _ack(paired_repo.root, "--broken", note="issue_token change is doc-compatible")
     proc = _run(paired_repo.root, "ack", "--broken")
     assert "nothing to ack" in proc.stdout
 
 
 def test_ack_prune_removes_unmapped_entries(paired_repo):
-    _run(paired_repo.root, "ack", "--all")
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
     from staledocs import ledger
 
     ledger.write_ack(paired_repo.root, "docs/gone.md", commit=None, doc_blob="x", code_blobs={})
@@ -78,7 +92,7 @@ def test_ack_unknown_doc_fails(paired_repo):
 
 
 def test_anchor_finding_reported(paired_repo):
-    _run(paired_repo.root, "ack", "--all")
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
     paired_repo.write(
         "docs/auth.md", "# Auth\n\nUses `vanished_function` from `src/auth/token.py`.\n"
     )
@@ -104,3 +118,111 @@ def test_pairs_listing(paired_repo):
     proc = _run(paired_repo.root, "pairs")
     assert "pair (explicit): docs/auth.md" in proc.stdout
     assert "src/auth/token.py" in proc.stdout
+
+
+# --- v0.2: two-step ack, explain, health, config baseline -------------------
+
+
+def test_ack_pending_shows_evidence_and_token(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v9'\n")
+    paired_repo.commit("code", "src/auth/token.py")
+    proc = _run(paired_repo.root, "ack", "docs/auth.md", expect=3)
+    assert "issue_token" in proc.stdout or "token.py" in proc.stdout  # evidence shown
+    assert "--confirm" in proc.stdout
+    # 台帳は動いていない (pending は書かない)
+    assert "acked docs/auth.md" not in proc.stdout
+
+
+def test_ack_confirm_rejects_stale_token(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v10'\n")
+    paired_repo.commit("code", "src/auth/token.py")
+    proc = _run(paired_repo.root, "ack", "docs/auth.md", expect=3)
+    token = _token_of(proc.stdout)
+    # 証拠を見た後にさらに動いた → 古いトークンは拒否
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v11'\n")
+    paired_repo.commit("moved again", "src/auth/token.py")
+    proc = _run(
+        paired_repo.root,
+        "ack", "docs/auth.md", "--confirm", token, "-m", "checked token.py",
+        expect=1,
+    )
+    assert "mismatch" in proc.stderr
+
+
+def test_ack_confirm_rejects_rubber_stamp_note(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v12'\n")
+    paired_repo.commit("code", "src/auth/token.py")
+    proc = _run(paired_repo.root, "ack", "docs/auth.md", expect=3)
+    token = _token_of(proc.stdout)
+    proc = _run(
+        paired_repo.root,
+        "ack", "docs/auth.md", "--confirm", token, "-m", "looks fine",
+        expect=1,
+    )
+    assert "note must name" in proc.stderr
+    # 証拠を名指しした note は通る
+    _run(
+        paired_repo.root,
+        "ack", "docs/auth.md", "--confirm", token, "-m", "token.py return value only",
+    )
+
+
+def test_green_pair_reacks_directly(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    proc = _run(paired_repo.root, "ack", "docs/auth.md", "-m", "refresh")
+    assert "acked docs/auth.md" in proc.stdout
+
+
+def test_explain_json_contract(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v13'\n")
+    paired_repo.commit("code", "src/auth/token.py")
+    proc = _run(paired_repo.root, "explain", "--json")
+    payload = json.loads(proc.stdout)
+    block = payload["pairs"][0]
+    assert block["doc"] == "docs/auth.md"
+    assert block["token"]
+    hits = block["hits"]
+    assert any(h["kind"] == "path" and h["file"] == "src/auth/token.py" for h in hits)
+    assert all("doc_lines" in h for h in hits)
+    # explain はゲートしない: red があっても exit 0 (expect=0 で走った時点で担保)
+
+
+def test_explain_quiet_when_green(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    proc = _run(paired_repo.root, "explain")
+    assert "all pairs green" in proc.stdout
+
+
+def test_pairs_health_flags_anchorless_doc(paired_repo):
+    paired_repo.write("docs/auth.md", "# Auth\n\nProse only.\n")
+    paired_repo.commit("strip anchors", "docs/auth.md")
+    proc = _run(paired_repo.root, "pairs", "--health", "--json")
+    payload = json.loads(proc.stdout)
+    row = payload["health"][0]
+    assert row["doc"] == "docs/auth.md"
+    assert row["always_red"] is True
+    proc = _run(paired_repo.root, "pairs", "--health")
+    assert "NO ANCHORS" in proc.stdout
+
+
+def test_ack_config_records_and_clears_weakening(paired_repo):
+    _ack(paired_repo.root, "--all", note="onboarding baseline")
+    _run(paired_repo.root, "ack", "--config", expect=2)  # note 必須 (usage error)
+    _run(paired_repo.root, "ack", "--config", "-m", "initial baseline")
+    # 弱体化: anchors.ignore 追加
+    cfg_path = paired_repo.root / ".staledocs.yaml"
+    cfg_path.write_text(
+        cfg_path.read_text(encoding="utf-8") + "anchors:\n  ignore: [issue_token]\n",
+        encoding="utf-8",
+    )
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert any("ignore added" in w for w in payload["config"]["weakenings"])
+    _run(paired_repo.root, "check", "--gate", "strict", expect=1)
+    proc = _run(paired_repo.root, "ack", "--config", "-m", "issue_token is a doc-only term now")
+    assert "accepted weakening" in proc.stdout
+    _run(paired_repo.root, "check", "--gate", "strict")

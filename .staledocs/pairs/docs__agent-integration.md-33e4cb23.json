@@ -1,14 +1,14 @@
 {
   "ack": {
-    "at": "2026-07-12T21:05:50+00:00",
+    "at": "2026-07-15T07:09:40+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "432e92425d37de04b356cf62a98623577f5e1eec",
-      "src/staledocs/engine.py": "2012cd3bf1fde87d251f8cbd5b0aad5e00de6d9d",
-      "src/staledocs/report.py": "d0470b10e882f820e16d0993233a13eaf8bd6e10"
+      "src/staledocs/cli.py": "52f378ed1d5c08e280bb3aa241e279bce54990c1",
+      "src/staledocs/engine.py": "f120ccddf65c4eb1ccc431a82878803730930e87",
+      "src/staledocs/report.py": "cd2f4f666005f6af63c4b946700cde25fa3ba48c"
     },
-    "commit": "11d3690304c68b21c79c083173852adb8d8769bf",
-    "doc_blob": "ac3f48903fe7cd848da7032c64c3fcc10672de38",
-    "note": "engine wiring fix, no doc-facing change"
+    "commit": "e99a2e5f09d6cbfa9c75fb6ce3fc4c9284ab60da",
+    "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
+    "note": "v0.2 rewrite: cli.py/engine.py/report.py two-step ack + explain + config baseline, docs updated in this worktree"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1
