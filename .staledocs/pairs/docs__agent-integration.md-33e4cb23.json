@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T19:05:51+00:00",
+    "at": "2026-07-15T19:15:35+00:00",
     "code_blobs": {
       "docs/reference/README.md": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
       "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
-      "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf"
+      "src/staledocs/report.py": "a334ecddd1b6d2ebc9a6dd40059ca1b7ab2159c4"
     },
-    "commit": "2f6f8d8e1689f286162a268ba4936d3e6a63d26f",
+    "commit": "06073de32d619f47063b767477ff2ddab661ac25",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "agent-integration pair amber from upstream README.md edit only; agent-facing exit codes and JSON in cli.py unchanged"
+    "note": "report.py hint is human-output only; the JSON contract cli.py serves agents is untouched"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1
