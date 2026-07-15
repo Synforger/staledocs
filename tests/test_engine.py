@@ -157,3 +157,174 @@ def test_standalone_doc_dead_path_still_flags(paired_repo):
     paired_repo.commit("runbook")
     result = _check(paired_repo)
     assert "src/gone/thing.py" in [f.token for f in result.anchor_findings]
+
+
+def test_unrelated_churn_downgrades_to_amber(paired_repo):
+    # docs/auth.md は issue_token と token.py にしか言及していない。 session.py だけが
+    # 動いた場合は「言及対象は無傷」 なので amber (= 反射 ack の燃料を断つ)。
+    _ack_all(paired_repo)
+    paired_repo.write("src/auth/session.py", "def open_session():\n    return 2\n")
+    paired_repo.commit("unrelated churn", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.AMBER
+    assert "none referenced" in report.detail
+
+
+def test_mentioned_path_change_stays_red(paired_repo):
+    _ack_all(paired_repo)
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'v2'\n")
+    paired_repo.commit("mentioned file", "src/auth/token.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.DOC_STALE
+    assert report.mentioned_changed == ["src/auth/token.py"]
+
+
+def test_quoted_identifier_in_changed_file_stays_red(paired_repo):
+    # session.py 自体は docs に言及されないが、 docs が引用する識別子 issue_token を
+    # 含む形に変わった → docs の語ってる対象が動いたとみなして red。
+    _ack_all(paired_repo)
+    paired_repo.write(
+        "src/auth/session.py",
+        "from .token import issue_token\n\ndef open_session():\n    return issue_token()\n",
+    )
+    paired_repo.commit("now touches issue_token", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.DOC_STALE
+    assert report.mentioned_changed == ["src/auth/session.py"]
+
+
+# --- v0.2: line-granularity intersection, evidence, config ledger -----------
+
+
+def test_ident_change_on_unrelated_lines_is_amber(paired_repo):
+    # session.py が issue_token を含む状態で ack。その後 issue_token に触れない
+    # 行だけ変更 → 変更行に引用識別子なし = amber。file 全体 grep (v0.1 加重 L1)
+    # なら red になっていた境界ケース。
+    paired_repo.write(
+        "src/auth/session.py",
+        "from .token import issue_token\n\ndef open_session():\n    return issue_token()\n",
+    )
+    paired_repo.commit("session uses issue_token", "src/auth/session.py")
+    _ack_all(paired_repo)
+    paired_repo.write(
+        "src/auth/session.py",
+        "from .token import issue_token\n\n"
+        "def open_session():\n    log = True\n    return issue_token()\n",
+    )
+    paired_repo.commit("unrelated line added", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.AMBER
+
+
+def test_ident_change_on_quoted_line_is_red_with_evidence(paired_repo):
+    _ack_all(paired_repo)
+    paired_repo.write(
+        "src/auth/session.py",
+        "def open_session():\n    return issue_token(refresh=True)\n",
+    )
+    paired_repo.commit("touches issue_token line", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.DOC_STALE
+    hit = next(h for h in report.hit_anchors if h.kind == "ident")
+    assert hit.token == "issue_token"
+    assert hit.file == "src/auth/session.py"
+    assert hit.doc_lines  # the doc line quoting it
+    assert any("issue_token" in ln for ln in hit.changed_lines)
+
+
+def test_anchorless_doc_stays_red(paired_repo):
+    paired_repo.write("docs/auth.md", "# Auth\n\nProse only, no quotes at all.\n")
+    paired_repo.commit("strip anchors", "docs/auth.md")
+    _ack_all(paired_repo)
+    paired_repo.write("src/auth/session.py", "def open_session():\n    return 3\n")
+    paired_repo.commit("any code move", "src/auth/session.py")
+    report = _pair_state(paired_repo)
+    assert report.state == engine.DOC_STALE
+    assert "no anchors" in report.detail
+
+
+def test_note_references_evidence():
+    report = engine.PairReport(
+        doc="docs/auth.md",
+        state=engine.DOC_STALE,
+        origin="explicit",
+        code_files=["src/auth/token.py"],
+        changed_code=["src/auth/token.py"],
+        hit_anchors=[engine.AnchorHit(file="src/auth/token.py", token="issue_token", kind="ident")],
+    )
+    assert engine.note_references_evidence("checked issue_token still per doc", report)
+    assert engine.note_references_evidence("token.py refactor only", report)
+    assert engine.note_references_evidence("auth.md wording still holds", report)
+    assert not engine.note_references_evidence("looks fine", report)
+    assert not engine.note_references_evidence("", report)
+
+
+def test_pair_fingerprint_tracks_content(paired_repo):
+    cfg = load(paired_repo.root)
+    mapping = resolve(cfg, gitio.ls_files(paired_repo.root))
+    pair = mapping.pairs[0]
+    t1 = engine.pair_fingerprint(paired_repo.root, pair)
+    assert t1 == engine.pair_fingerprint(paired_repo.root, pair)  # deterministic
+    paired_repo.write("src/auth/token.py", "def issue_token():\n    return 'moved'\n")
+    t2 = engine.pair_fingerprint(paired_repo.root, pair)
+    assert t1 != t2
+    assert engine.aggregate_token([t1]) == t1
+    assert engine.aggregate_token([t1, t2]) == engine.aggregate_token([t2, t1])
+
+
+def test_config_weakenings_directions():
+    old = ledger.config_snapshot(load_cfg_like(gate="strict", ignore=[], min_length=3))
+    new = ledger.config_snapshot(
+        load_cfg_like(gate="warn", ignore=["secret_*"], min_length=4, drop_pair=True)
+    )
+    weak = ledger.config_weakenings(old, new)
+    joined = "\n".join(weak)
+    assert "strict -> warn" in joined
+    assert "pair removed: docs/auth.md" in joined
+    assert "anchor ignore added" in joined
+    assert "min_length raised" in joined
+    # 強化方向は無音
+    assert not ledger.config_weakenings(new, new)
+    assert not ledger.config_weakenings(old, old)
+
+
+def load_cfg_like(gate="warn", ignore=None, min_length=3, drop_pair=False):
+    from staledocs.config import AnchorRule, Config, PairRule
+
+    cfg = Config()
+    cfg.gate = gate
+    cfg.source_include = ["src/**"]
+    cfg.pairs = [] if drop_pair else [PairRule(doc="docs/auth.md", code=["src/auth/**"])]
+    cfg.anchors = AnchorRule(min_length=min_length, ignore=list(ignore or []))
+    return cfg
+
+
+def test_config_weakening_reds_check_until_accepted(paired_repo):
+    _ack_all(paired_repo)
+    cfg = load(paired_repo.root)
+    ledger.write_config_ack(paired_repo.root, ledger.config_snapshot(cfg), note="baseline")
+    result = _check(paired_repo)
+    assert result.config_weakenings == []
+    assert not result.config_baseline_missing
+
+    cfg_path = paired_repo.root / ".staledocs.yaml"
+    cfg_path.write_text(
+        cfg_path.read_text(encoding="utf-8") + "anchors:\n  ignore: [issue_token]\n",
+        encoding="utf-8",
+    )
+    result = _check(paired_repo)
+    assert any("ignore added" in w for w in result.config_weakenings)
+    assert result.red_count() >= 1
+
+    # 受け入れ = 新 snapshot を baseline 化 → red 解消
+    cfg2 = load(paired_repo.root)
+    ledger.write_config_ack(paired_repo.root, ledger.config_snapshot(cfg2), note="accepted")
+    result = _check(paired_repo)
+    assert result.config_weakenings == []
+
+
+def test_config_baseline_missing_is_warn_only(paired_repo):
+    result = _check(paired_repo)
+    assert result.config_baseline_missing
+    # baseline 不在は red に数えない (既存 v0.1 導入 repo の upgrade を壊さない)
+    assert all("config" not in w for w in result.config_weakenings)

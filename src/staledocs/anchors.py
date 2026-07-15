@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import AnchorRule
@@ -321,3 +321,78 @@ def dirs_of(files: set[str]) -> set[str]:
         for i in range(1, len(parts)):
             dirs.add("/".join(parts[:i]))
     return dirs
+
+
+@dataclass
+class DocMentions:
+    """What a doc talks about, per its own anchors.
+
+    - path_files: repo file -> doc lines whose path-like anchors resolve to it
+    - idents: bare identifier token -> doc lines quoting it
+    - total_anchors: every anchor extracted, resolvable or not — zero means
+      the doc gives the grader nothing to work with
+    """
+
+    path_files: dict[str, list[int]] = field(default_factory=dict)
+    idents: dict[str, list[int]] = field(default_factory=dict)
+    total_anchors: int = 0
+
+
+def doc_mention_index(
+    repo_root: Path,
+    doc: str,
+    rule: AnchorRule,
+    all_files: set[str],
+    all_dirs: set[str],
+    path_roots: list[str] | None = None,
+) -> DocMentions:
+    """Build the doc's mention index for the anchor-graded L1.
+
+    A pair break is RED only when a changed file is one the doc actually
+    mentions — by path anchor (file granularity), or because the change's
+    added/removed lines contain a quoted identifier (line granularity).
+    Everything else downgrades to AMBER.
+    """
+    mentions = DocMentions()
+    try:
+        text = (repo_root / doc).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return mentions
+
+    def _mention(rel: str, line: int) -> None:
+        mentions.path_files.setdefault(rel, []).append(line)
+
+    for anchor in extract(doc, text, rule):
+        token = anchor.token
+        mentions.total_anchors += 1
+        if "::" in token and "." in token.partition("::")[0]:
+            resolved = _resolve_path(
+                token.partition("::")[0], all_files, all_dirs, path_roots, anchor.doc_dir
+            )
+            if resolved:
+                _mention(resolved, anchor.line)
+            continue
+        if anchor.path_like:
+            for cand in _path_candidates(token, path_roots, anchor.doc_dir):
+                if cand in all_files:
+                    _mention(cand, anchor.line)
+                elif cand in all_dirs:
+                    prefix = cand.rstrip("/") + "/"
+                    for f in all_files:
+                        if f.startswith(prefix):
+                            _mention(f, anchor.line)
+                elif any(ch in cand for ch in "*?["):
+                    from . import globs
+
+                    for f in all_files:
+                        if globs.matches(cand, f):
+                            _mention(f, anchor.line)
+            continue
+        resolved = _resolve_path(token, all_files, all_dirs, path_roots, anchor.doc_dir)
+        if resolved:
+            _mention(resolved, anchor.line)
+            continue
+        bare = _bare(token)
+        if len(bare) >= 3:
+            mentions.idents.setdefault(bare, []).append(anchor.line)
+    return mentions

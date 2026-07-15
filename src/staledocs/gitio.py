@@ -153,6 +153,47 @@ def blob_at_commit(repo_root: Path, sha: str, rel_path: str) -> str | None:
     return proc.stdout.strip()
 
 
+def blob_text(repo_root: Path, blob_sha: str) -> str | None:
+    """Content of a blob object, or None when git does not have it.
+
+    An ack taken on a dirty worktree records a hash the object database may
+    never have stored — callers must treat None as "old content unknown".
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "blob", blob_sha],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def changed_lines(old_text: str | None, new_text: str | None) -> list[str]:
+    """Added/removed line text between two file versions (pure difflib —
+    no object-database dependency, deterministic).
+
+    None on either side means the file is absent there: every line of the
+    other side counts as changed.
+    """
+    import difflib
+
+    old_lines = old_text.splitlines() if old_text is not None else []
+    new_lines = new_text.splitlines() if new_text is not None else []
+    if not old_lines:
+        return list(new_lines)
+    if not new_lines:
+        return list(old_lines)
+    out: list[str] = []
+    matcher = difflib.SequenceMatcher(None, old_lines, new_lines, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        out.extend(old_lines[i1:i2])
+        out.extend(new_lines[j1:j2])
+    return out
+
+
 def ignored_paths(repo_root: Path, candidates: list[str]) -> set[str]:
     """Subset of `candidates` that .gitignore rules would ignore.
 

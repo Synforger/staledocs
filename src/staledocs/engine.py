@@ -36,6 +36,18 @@ RED_STATES = {DOC_STALE, CODE_LAG, BROKEN, UNACKED}
 
 
 @dataclass
+class AnchorHit:
+    """One piece of intersection evidence: the doc names this thing, and the
+    change touched it."""
+
+    file: str
+    token: str
+    kind: str  # "path" (file granularity) | "ident" (line granularity)
+    doc_lines: list[int] = field(default_factory=list)
+    changed_lines: list[str] = field(default_factory=list)
+
+
+@dataclass
 class PairReport:
     doc: str
     state: str
@@ -49,6 +61,8 @@ class PairReport:
     ack_commit: str | None = None
     ack_at: str = ""
     detail: str = ""
+    mentioned_changed: list[str] = field(default_factory=list)
+    hit_anchors: list[AnchorHit] = field(default_factory=list)
 
 
 @dataclass
@@ -60,6 +74,8 @@ class CheckResult:
     uncovered_source: list[str] = field(default_factory=list)
     dead_pair_docs: list[str] = field(default_factory=list)
     stale_ledger_docs: list[str] = field(default_factory=list)
+    config_weakenings: list[str] = field(default_factory=list)
+    config_baseline_missing: bool = False
 
     def red_count(self) -> int:
         return (
@@ -69,6 +85,7 @@ class CheckResult:
             + len(self.orphan_pairs)
             + len(self.uncovered_source)
             + len(self.dead_pair_docs)
+            + len(self.config_weakenings)
         )
 
     def amber_count(self) -> int:
@@ -128,7 +145,104 @@ def _co_moved(repo_root: Path, ack_commit: str | None, doc: str, changed_code: s
     return saw_code_change
 
 
-def check_pair(repo_root: Path, pair: ResolvedPair) -> PairReport:
+@dataclass
+class MentionContext:
+    """Precomputed repo facts for the anchor-weighted L1 (shared per run)."""
+
+    anchors_rule: object
+    all_files: set[str]
+    all_dirs: set[str]
+    path_roots: list[str]
+
+
+_SNIPPET_LIMIT = 3  # changed-line snippets kept per hit (evidence, not a dump)
+_SNIPPET_WIDTH = 160
+
+
+def _changed_line_text(repo_root: Path, rel: str, old_blob: str | None) -> list[str]:
+    """Added/removed line text for one file between the acked blob and now.
+
+    When the old blob is unknown to git (ack taken on a dirty worktree that
+    was never committed), the whole current content counts as changed —
+    conservative in the red direction, never silently green.
+    """
+    new_text: str | None
+    try:
+        new_text = (repo_root / rel).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        new_text = None
+    old_text = gitio.blob_text(repo_root, old_blob) if old_blob else None
+    return gitio.changed_lines(old_text, new_text)
+
+
+def _intersect(
+    repo_root: Path,
+    pair: ResolvedPair,
+    changed: set[str],
+    ack: ledger.Ack,
+    ctx: MentionContext,
+) -> tuple[list[AnchorHit], int]:
+    """The anchor-graded L1 core: intersect the doc's mentions with the diff.
+
+    - a path anchor resolving to a changed file hits at file granularity
+      (the doc talks about the file as a unit)
+    - an identifier anchor hits at line granularity: only when the token
+      appears in the added/removed lines since the ack
+    Returns (hits, total_anchor_count).
+    """
+    mentions = anchors_mod.doc_mention_index(
+        repo_root, pair.doc, ctx.anchors_rule, ctx.all_files, ctx.all_dirs, ctx.path_roots
+    )
+    hits: list[AnchorHit] = []
+    for rel in sorted(changed):
+        if rel in mentions.path_files:
+            hits.append(
+                AnchorHit(
+                    file=rel,
+                    token=rel,
+                    kind="path",
+                    doc_lines=sorted(set(mentions.path_files[rel])),
+                )
+            )
+    if mentions.idents:
+        path_hit_files = {h.file for h in hits}
+        for rel in sorted(changed - path_hit_files):
+            lines = _changed_line_text(repo_root, rel, ack.code_blobs.get(rel))
+            if not lines:
+                continue
+            for token, doc_lines in sorted(mentions.idents.items()):
+                matched = [ln for ln in lines if token in ln]
+                if not matched:
+                    continue
+                hits.append(
+                    AnchorHit(
+                        file=rel,
+                        token=token,
+                        kind="ident",
+                        doc_lines=sorted(set(doc_lines)),
+                        changed_lines=[
+                            ln.strip()[:_SNIPPET_WIDTH] for ln in matched[:_SNIPPET_LIMIT]
+                        ],
+                    )
+                )
+    return hits, mentions.total_anchors
+
+
+def make_mention_ctx(repo_root: Path, cfg: Config) -> MentionContext:
+    tracked = set(gitio.ls_files(repo_root))
+    return MentionContext(
+        anchors_rule=cfg.anchors,
+        all_files=tracked,
+        all_dirs=anchors_mod.dirs_of(tracked),
+        path_roots=cfg.anchors.path_roots,
+    )
+
+
+def check_pair(
+    repo_root: Path,
+    pair: ResolvedPair,
+    mention_ctx: MentionContext | None = None,
+) -> PairReport:
     report = PairReport(
         doc=pair.doc,
         state=UNACKED,
@@ -178,7 +292,28 @@ def check_pair(repo_root: Path, pair: ResolvedPair) -> PairReport:
     if not code_changed and not report.doc_changed:
         report.state = GREEN
     elif code_changed and not report.doc_changed:
-        report.state = DOC_STALE
+        # anchor-graded L1 (v0.2): the break is RED only when the change
+        # touches something this doc names — a path anchor's file moved, or a
+        # quoted identifier appears in the added/removed lines. Unrelated
+        # churn inside a wide pair downgrades to AMBER, so RED keeps its
+        # urgency and the reflexive-ack habit loses its fuel. A doc with no
+        # anchors at all gives the grader nothing — it stays RED by rule.
+        if mention_ctx is None:
+            report.state = DOC_STALE
+        else:
+            hits, total_anchors = _intersect(repo_root, pair, changed, ack, mention_ctx)
+            report.hit_anchors = hits
+            report.mentioned_changed = sorted({h.file for h in hits})
+            if total_anchors == 0:
+                report.state = DOC_STALE
+                report.detail = "doc has no anchors — ungradeable, red by rule"
+            elif hits:
+                report.state = DOC_STALE
+            else:
+                report.state = AMBER
+                report.detail = (
+                    f"{len(changed)} file(s) moved, none referenced by this doc"
+                )
     elif report.doc_changed and not code_changed:
         report.state = CODE_LAG
     else:
@@ -197,8 +332,18 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         dead_pair_docs=mapping.dead_pair_docs,
     )
 
+    # config weakening (the backdoor check): red until accepted via ack --config
+    baseline = ledger.read_config_ack(repo_root)
+    if baseline is None:
+        result.config_baseline_missing = True
+    else:
+        result.config_weakenings = ledger.config_weakenings(
+            baseline, ledger.config_snapshot(cfg)
+        )
+
+    mention_ctx = make_mention_ctx(repo_root, cfg)
     for pair in mapping.pairs:
-        result.pairs.append(check_pair(repo_root, pair))
+        result.pairs.append(check_pair(repo_root, pair, mention_ctx))
 
     # ledger entries whose doc vanished from the mapping (deleted or renamed)
     mapped_docs = {p.doc for p in mapping.pairs}
@@ -267,6 +412,92 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
 
     _ = all_files  # reserved for future scope tuning
     return result
+
+
+def pair_fingerprint(repo_root: Path, pair: ResolvedPair) -> str:
+    """Deterministic token over the pair's current content.
+
+    The two-step ack echoes this back: if either side moves between showing
+    the evidence and confirming, the token no longer matches and the confirm
+    is refused — the evidence shown is always the evidence acked.
+    """
+    import hashlib
+
+    parts = [pair.doc, gitio.hash_object(repo_root, pair.doc) or "-"]
+    for rel in pair.code_files:
+        parts.append(f"{rel}:{gitio.hash_object(repo_root, rel) or '-'}")
+    return hashlib.sha1("\n".join(parts).encode("utf-8")).hexdigest()[:12]
+
+
+def aggregate_token(fingerprints: list[str]) -> str:
+    import hashlib
+
+    if len(fingerprints) == 1:
+        return fingerprints[0]
+    return hashlib.sha1("\n".join(sorted(fingerprints)).encode("utf-8")).hexdigest()[:12]
+
+
+def build_evidence(repo_root: Path, report: PairReport) -> dict:
+    """The read-this-before-you-stamp block for one broken pair (JSON-ready).
+
+    Pairs the doc's own words with the change: every hit carries the doc
+    line text alongside the changed-line snippets, so the reader (human or
+    agent) gets the exact two things to compare, not a file list.
+    """
+    import contextlib
+
+    doc_lines: list[str] = []
+    with contextlib.suppress(OSError):
+        doc_lines = (repo_root / report.doc).read_text(
+            encoding="utf-8", errors="ignore"
+        ).splitlines()
+
+    def _excerpt(lineno: int) -> str:
+        if 1 <= lineno <= len(doc_lines):
+            return doc_lines[lineno - 1].strip()[:_SNIPPET_WIDTH]
+        return ""
+
+    hits = [
+        {
+            "file": h.file,
+            "token": h.token,
+            "kind": h.kind,
+            "doc_lines": [
+                {"line": ln, "text": _excerpt(ln)} for ln in h.doc_lines[:_SNIPPET_LIMIT]
+            ],
+            "changed_lines": h.changed_lines,
+        }
+        for h in report.hit_anchors
+    ]
+    return {
+        "doc": report.doc,
+        "state": report.state,
+        "changed_code": report.changed_code,
+        "added_code": report.added_code,
+        "removed_code": report.removed_code,
+        "rename_hints": report.rename_hints,
+        "doc_changed": report.doc_changed,
+        "detail": report.detail,
+        "hits": hits,
+    }
+
+
+def note_references_evidence(note: str, report: PairReport) -> bool:
+    """Deterministic note-content check: the note must name something the
+    evidence showed — a changed file (path or basename), a hit anchor token,
+    or the doc itself. A rubber-stamp note fails; no semantic judgement."""
+    text = note.strip()
+    if not text:
+        return False
+    candidates: set[str] = set()
+    for rel in report.changed_code:
+        candidates.add(rel)
+        candidates.add(rel.rsplit("/", 1)[-1])
+    for h in report.hit_anchors:
+        candidates.add(h.token)
+    candidates.add(report.doc)
+    candidates.add(report.doc.rsplit("/", 1)[-1])
+    return any(c and c in text for c in candidates)
 
 
 def ack_pair(repo_root: Path, pair: ResolvedPair, note: str = "") -> Path:

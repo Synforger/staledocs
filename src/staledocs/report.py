@@ -54,6 +54,17 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
         lines.append(
             yellow(f"[ledger] unmapped entry (clean up with `staledocs ack --prune`): {doc}")
         )
+    for w in result.config_weakenings:
+        lines.append(
+            red(f"[config] check weakened: {w} (accept with `staledocs ack --config -m ...`)")
+        )
+    if result.config_baseline_missing:
+        lines.append(
+            yellow(
+                "[config] no accepted baseline yet — record one with "
+                "`staledocs ack --config -m 'initial baseline'`"
+            )
+        )
 
     for pair in result.pairs:
         if pair.state == GREEN and not show_green:
@@ -71,6 +82,15 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
                 lines.append(dim("      doc moved since last ack"))
             for old, new in pair.rename_hints.items():
                 lines.append(dim(f"      rename? {old} -> {new} (identical content)"))
+            for hit in pair.hit_anchors:
+                where = ",".join(str(n) for n in hit.doc_lines)
+                if hit.kind == "path":
+                    lines.append(dim(f"      doc names this file (doc line {where}): {hit.file}"))
+                else:
+                    lines.append(
+                        dim(f"      doc quotes `{hit.token}` (doc line {where})"
+                            f" — changed in {hit.file}")
+                    )
             if pair.detail:
                 lines.append(dim(f"      {pair.detail}"))
 
@@ -82,6 +102,36 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
     greens = sum(1 for p in result.pairs if p.state == GREEN)
     summary = f"staledocs: {reds} red, {ambers} amber, {greens} green pairs"
     lines.append((red if reds else yellow if ambers else green)(summary))
+    return "\n".join(lines)
+
+
+def render_evidence(evidence: dict, color: bool | None = None) -> str:
+    """One pair's read-before-you-stamp block: the doc's words next to the
+    change that touched them."""
+    if color is None:
+        color = sys.stdout.isatty()
+    red = lambda t: _color(color, "31", t)  # noqa: E731
+    dim = lambda t: _color(color, "2", t)  # noqa: E731
+    bold = lambda t: _color(color, "1", t)  # noqa: E731
+
+    lines = [bold(f"{evidence['doc']}  [{evidence['state']}]")]
+    if evidence["changed_code"]:
+        lines.append(f"  code moved: {', '.join(evidence['changed_code'])}")
+    for old, new in evidence.get("rename_hints", {}).items():
+        lines.append(f"  rename? {old} -> {new}")
+    if evidence.get("doc_changed"):
+        lines.append("  doc moved since last ack")
+    for hit in evidence["hits"]:
+        if hit["kind"] == "path":
+            lines.append(red(f"  doc names changed file: {hit['file']}"))
+        else:
+            lines.append(red(f"  doc quotes `{hit['token']}` — changed in {hit['file']}"))
+        for dl in hit["doc_lines"]:
+            lines.append(dim(f"    doc  L{dl['line']}: {dl['text']}"))
+        for cl in hit["changed_lines"]:
+            lines.append(dim(f"    diff       : {cl}"))
+    if not evidence["hits"] and evidence.get("detail"):
+        lines.append(dim(f"  {evidence['detail']}"))
     return "\n".join(lines)
 
 
@@ -103,6 +153,10 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "uncovered_source": result.uncovered_source,
             "dead_pair_docs": result.dead_pair_docs,
             "stale_ledger_docs": result.stale_ledger_docs,
+        },
+        "config": {
+            "weakenings": result.config_weakenings,
+            "baseline_missing": result.config_baseline_missing,
         },
         "classification": {
             "paired": [p.doc for p in mapping.pairs],

@@ -118,3 +118,98 @@ def remove_entry(repo_root: Path, doc: str) -> bool:
         path.unlink()
         return True
     return False
+
+
+# --- config baseline (the anti-backdoor ledger) -----------------------------
+#
+# Weakening the checks (dropping a pair, downgrading the gate, widening the
+# ignore list) must itself be a checked event. The accepted config lives as a
+# structural snapshot next to the pair ledger; `check` compares the current
+# config against it and reds any weakening until `ack --config` records the
+# acceptance with a note.
+
+CONFIG_ACK_FILE = ".staledocs/config-ack.json"
+
+
+def config_snapshot(cfg: object) -> dict:
+    """The weakening-relevant surface of a Config, as plain data."""
+    return {
+        "gate": cfg.gate,
+        "pair_docs": sorted(p.doc for p in cfg.pairs),
+        "source_include": sorted(cfg.source_include),
+        "source_exclude": sorted(cfg.source_exclude),
+        "docs_include": sorted(cfg.docs_include),
+        "docs_exclude": sorted(cfg.docs_exclude),
+        "anchors": {
+            "min_length": cfg.anchors.min_length,
+            "ignore": sorted(cfg.anchors.ignore),
+            "include_fenced": cfg.anchors.include_fenced,
+        },
+    }
+
+
+def read_config_ack(repo_root: Path) -> dict | None:
+    path = repo_root / CONFIG_ACK_FILE
+    if not path.is_file():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
+        return None
+    accepted = raw.get("accepted")
+    return accepted if isinstance(accepted, dict) else None
+
+
+def write_config_ack(repo_root: Path, snapshot: dict, note: str = "") -> Path:
+    path = repo_root / CONFIG_ACK_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": SCHEMA,
+        "accepted": snapshot,
+        "note": note,
+        "at": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return path
+
+
+def config_weakenings(old: dict, new: dict) -> list[str]:
+    """Human-readable list of ways `new` checks less than `old`.
+
+    Only weakening directions fire — strengthening (gate up, pair added,
+    ignore removed) never does, so routine config growth stays silent.
+    """
+    out: list[str] = []
+    if old.get("gate") == "strict" and new.get("gate") == "warn":
+        out.append("gate downgraded: strict -> warn")
+    for doc in old.get("pair_docs", []):
+        if doc not in new.get("pair_docs", []):
+            out.append(f"pair removed: {doc}")
+    for pat in old.get("source_include", []):
+        if pat not in new.get("source_include", []):
+            out.append(f"source scope narrowed: include dropped {pat!r}")
+    for pat in new.get("source_exclude", []):
+        if pat not in old.get("source_exclude", []):
+            out.append(f"source scope narrowed: exclude added {pat!r}")
+    for pat in old.get("docs_include", []):
+        if pat not in new.get("docs_include", []):
+            out.append(f"docs scope narrowed: include dropped {pat!r}")
+    for pat in new.get("docs_exclude", []):
+        if pat not in old.get("docs_exclude", []):
+            out.append(f"docs scope narrowed: exclude added {pat!r}")
+    old_a = old.get("anchors", {})
+    new_a = new.get("anchors", {})
+    if new_a.get("min_length", 0) > old_a.get("min_length", 0):
+        out.append(
+            f"anchor min_length raised: {old_a.get('min_length')} -> {new_a.get('min_length')}"
+        )
+    for tok in new_a.get("ignore", []):
+        if tok not in old_a.get("ignore", []):
+            out.append(f"anchor ignore added: {tok!r}")
+    if old_a.get("include_fenced") and not new_a.get("include_fenced"):
+        out.append("fenced-block anchors disabled: include_fenced true -> false")
+    return out

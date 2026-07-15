@@ -19,10 +19,14 @@ staledocs は「覚えておく」を不要にする。すべての文書を、�
 
 検出は 4 層。最初の 3 層は完全に決定的で、AI はどこにもいない:
 
-1. **ペア台帳 (L1)** — ペアごとに、最後に整合を確認 (= *ack*) した時点の
-   git blob hash を記録する。コードだけ動いた → `DOC_STALE` (文書が古い
-   疑い)。文書だけ動いた → `CODE_LAG` (未実装仕様の疑い)。両方が同じ
-   commit 群で一緒に動いた → `AMBER` (暫定整合)。別々に動いた → `BROKEN`。
+1. **ペア台帳 + アンカー格付け (L1)** — ペアごとに、最後に整合を確認
+   (= *ack*) した時点の git blob hash を記録する。コードだけ動いた場合、
+   red になるのは**変更が文書の名指しした対象に触れた時だけ**: パスで
+   言及した file が動いたか、引用した識別子が追加・削除行に現れた時。
+   無関係な変更は理由付きの `AMBER` に降格する — red は「本当に読むべき
+   時」だけ鳴る。文書だけ動いた → `CODE_LAG` (未実装仕様の疑い)。両方が
+   同じ commit 群で一緒に動いた → `AMBER` (暫定整合)。別々に動いた →
+   `BROKEN`。
 2. **アンカー生存検証 (L2)** — 文書は自然に識別子・CLI フラグ・パスを
    バックティックで引用している。staledocs はそれらを抽出し、ペアの
    コード側に今も実在するかを検証して、腐った文書の行番号まで特定する。
@@ -44,15 +48,24 @@ cd your-repo
 staledocs init            # .staledocs.yaml と台帳 dir を生成
 $EDITOR .staledocs.yaml   # ペアリングを宣言
 staledocs check           # 未所有 / 未 ack を確認
-staledocs ack --all       # 基準線: 「現時点で全部整合」
+staledocs ack --all       # 基準線 1 段目: 証拠 + トークン表示 (exit 3)
+staledocs ack --all --confirm <token> -m 'onboarding baseline'
 ```
 
 以降の日常:
 
 ```sh
 staledocs check             # 変更後: 何が破れた?
-staledocs ack docs/auth.md  # 整合を確認した (= ハンコ)
+staledocs explain           # 文書の記述と、それに触れた変更行の並置
+staledocs ack docs/auth.md  # 1 段目: 証拠 + トークン
+staledocs ack docs/auth.md --confirm <token> -m 'issue_token は記述通り'
 ```
+
+ack は 2 段制: 1 段目が「文書のその行」と「それを触った変更行」を並べて
+見せ、トークンを出す。2 段目は そのトークン + 証拠を名指しした note が
+ないと成立しない — 読まずに押すハンコは構造的に不可能。検査を弱める
+config 変更 (ペア削除 / gate 降格 / ignore 追加) も check 自身が red 化し、
+`ack --config` での明示受け入れだけが通す。
 
 設定・ack・CI 統合・エージェント統合の詳細は [`README.md`](README.md)
 (英語) と [`docs/`](docs/) を参照。
