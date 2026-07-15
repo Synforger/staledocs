@@ -68,8 +68,9 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
     if result.config_baseline_missing:
         lines.append(
             yellow(
-                "[config] no accepted baseline yet — record one with "
-                "`staledocs ack --config -m 'initial baseline'`"
+                "[config] no accepted baseline yet — record it with "
+                "`staledocs ack --config -m 'initial baseline'` "
+                "(a first record is initialization, not a weakening approval)"
             )
         )
 

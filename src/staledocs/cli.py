@@ -83,8 +83,21 @@ def init(with_suggest: bool) -> None:
     )
     (repo_root / LEDGER_DIR).mkdir(parents=True, exist_ok=True)
     (repo_root / LEDGER_DIR / ".gitkeep").write_text("", encoding="utf-8")
+    # a config the tool just wrote is trivially acceptable as the baseline —
+    # recording it here means the weakening gate only ever fires on a real
+    # diff against something, never on "there was nothing before" (an
+    # initialization is not a weakening, and agents refusing to self-approve
+    # weakenings must not deadlock on it)
+    ledger.write_config_ack(
+        repo_root,
+        ledger.config_snapshot(_load_config(repo_root)),
+        note="initial baseline recorded by init (scaffold config, nothing weakened)",
+    )
     click.echo(
         f"wrote {CONFIG_NAME} and {LEDGER_DIR}/ — edit the pairing, then run `staledocs check`"
+    )
+    click.echo(
+        "config baseline recorded (edits from here on are diffed against the scaffold)"
     )
     if with_suggest:
         click.echo()
@@ -188,7 +201,15 @@ def ack(
         if weakenings:
             for w in weakenings:
                 click.echo(f"accepted weakening: {w}")
-        click.echo("config baseline recorded")
+        if baseline is None:
+            # first record: there was no prior baseline, so nothing was
+            # weakened — this is initialization, not a weakening approval
+            click.echo(
+                "initial config baseline recorded (no prior baseline — "
+                "nothing weakened, this is not a weakening approval)"
+            )
+        else:
+            click.echo("config baseline recorded")
         if not (docs or ack_all or ack_broken or prune):
             return
 

@@ -361,3 +361,35 @@ def test_anchor_findings_carry_the_triage_hint(paired_repo):
     assert "not found in" in proc.stdout
     assert "rotted, or not built yet?" in proc.stdout
     assert "docs/setup" in proc.stdout
+
+
+# --- initial baseline vs weakening gate --------------------------------------
+
+
+def test_init_records_the_baseline_itself(repo):
+    repo.write("src/x.py", "pass\n")
+    repo.commit("seed")
+    proc = _run(repo.root, "init")
+    assert "config baseline recorded" in proc.stdout
+    assert (repo.root / ".staledocs/config-ack.json").is_file()
+    proc = _run(repo.root, "check")
+    assert "no accepted baseline" not in proc.stdout
+
+
+def test_first_config_ack_says_initialization_not_weakening(paired_repo):
+    proc = _run(paired_repo.root, "ack", "--config", "-m", "initial baseline")
+    assert "initial config baseline recorded" in proc.stdout
+    assert "not a weakening approval" in proc.stdout
+    assert "accepted weakening" not in proc.stdout
+
+
+def test_weakening_after_init_baseline_still_fires(repo):
+    repo.write("src/x.py", "pass\n")
+    repo.commit("seed")
+    _run(repo.root, "init")
+    cfg_path = repo.root / ".staledocs.yaml"
+    cfg = cfg_path.read_text().replace("gate: warn", "gate: warn")
+    cfg += "\nanchors:\n  ignore: [something]\n"
+    cfg_path.write_text(cfg)
+    proc = _run(repo.root, "check")
+    assert "anchor ignore added: 'something'" in proc.stdout
