@@ -42,6 +42,13 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
 
     for doc in result.dead_pair_docs:
         lines.append(red(f"[mapping] pair doc does not exist: {doc}"))
+    for entry in result.out_of_scope_pair_code:
+        lines.append(
+            red(
+                f"[mapping] pair code entry matches only files outside "
+                f"source/docs scope (widen the include, or drop the entry): {entry}"
+            )
+        )
     for doc in result.unclassified_docs:
         lines.append(
             red(f"[coverage] doc not classified (pair it, or declare standalone/global): {doc}")
@@ -164,6 +171,7 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "orphan_pairs": result.orphan_pairs,
             "uncovered_source": result.uncovered_source,
             "dead_pair_docs": result.dead_pair_docs,
+            "out_of_scope_pair_code": result.out_of_scope_pair_code,
             "stale_ledger_docs": result.stale_ledger_docs,
         },
         "config": {
