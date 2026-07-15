@@ -1,6 +1,6 @@
 {
   "ack": {
-    "at": "2026-07-15T19:05:50+00:00",
+    "at": "2026-07-15T19:15:34+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "3ed1f8c6e36965a2b82bd7d449c83da7902f007e",
       "src/staledocs/anchors.py": "ebcfdb07e5aeb7e4cce879d3bf67eb8e94189a04",
@@ -12,12 +12,12 @@
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
       "src/staledocs/mapping.py": "a3b9785b5510a0e38b305d93a4072ace8299bbd0",
-      "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf",
+      "src/staledocs/report.py": "a334ecddd1b6d2ebc9a6dd40059ca1b7ab2159c4",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "2f6f8d8e1689f286162a268ba4936d3e6a63d26f",
+    "commit": "06073de32d619f47063b767477ff2ddab661ac25",
     "doc_blob": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
-    "note": "include_fenced row in README.md now states the fence escape hatch for planned layouts \u2014 docs-only change, cli.py/config behavior untouched"
+    "note": "report.py adds a dim triage hint line after anchor findings; README.md's documented finding format (token/line/scope) unchanged, hint is additive"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

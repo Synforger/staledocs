@@ -103,6 +103,17 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
 
     for f in result.anchor_findings:
         lines.append(red(f"[anchor] {f.doc}:{f.line} `{f.token}` not found in {f.scope} scope"))
+    if result.anchor_findings:
+        # the map is handed out at the moment of stepping, not buried in docs:
+        # a missing anchor is either rot or a reference to something not built
+        # yet, and the two have different correct moves
+        lines.append(
+            dim(
+                "      (rotted, or not built yet? rot -> fix the doc; planned -> "
+                "fence it, keep the plan doc out of scope, or anchors.ignore it "
+                "until it lands — triage table: docs/setup)"
+            )
+        )
 
     if result.examples is not None and result.examples.enabled:
         for block in result.examples.undeclared:

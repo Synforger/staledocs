@@ -347,3 +347,17 @@ def test_default_branch_prefixes_do_not_fire_against_old_baselines(paired_repo):
     ack_file.write_text(_json.dumps(data))
     proc = _run(paired_repo.root, "check")
     assert "branch prefix added" not in proc.stdout
+
+
+def test_anchor_findings_carry_the_triage_hint(paired_repo):
+    # the map is handed out at the moment of stepping: a missing anchor
+    # explains its two causes (rot vs not-built-yet) and the moves
+    _ack(paired_repo.root, "--all", note="onboarding baseline for docs/auth.md")
+    paired_repo.write(
+        "docs/auth.md", "# Auth\n\nUses `vanished_function` from `src/auth/token.py`.\n"
+    )
+    paired_repo.commit("doc quotes a gone identifier", "docs/auth.md")
+    proc = _run(paired_repo.root, "check")
+    assert "not found in" in proc.stdout
+    assert "rotted, or not built yet?" in proc.stdout
+    assert "docs/setup" in proc.stdout
