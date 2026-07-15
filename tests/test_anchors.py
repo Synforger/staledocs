@@ -259,3 +259,23 @@ def test_symbol_anchor_into_gitignored_file_passes(tmp_path: Path):
         set(), set(), check_ignored=ignored,
     )
     assert findings == []
+
+
+def test_call_notation_with_slash_in_args_is_not_a_path(tmp_path: Path):
+    # `exp(−d/λ)` — a formula quoted in a design doc. The slash lives inside
+    # the call arguments; the path branch must not capture the token before
+    # the bare-identifier fallback (field-reported: the whole token went red
+    # while the reference promised the `exp` fallback).
+    (tmp_path / "model.py").write_text("import numpy as np\np = np.exp(-d)\n", encoding="utf-8")
+    text = "Connection probability decays as `exp(−d/λ)` with distance.\n"
+    found = anchors.extract("d.md", text, RULE)
+    assert [(a.token, a.path_like) for a in found] == [("exp(−d/λ)", False)]
+    idx = CodeIndex(tmp_path, ["model.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert findings == []
+
+
+def test_path_with_parens_after_slash_stays_a_path():
+    # a genuine path whose later segment contains parens keeps path semantics
+    got = anchors.extract("d.md", "Kept under `src/legacy/util(old).py` for now.\n", RULE)
+    assert [(a.token, a.path_like) for a in got] == [("src/legacy/util(old).py", True)]
