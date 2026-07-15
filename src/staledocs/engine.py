@@ -76,6 +76,7 @@ class CheckResult:
     stale_ledger_docs: list[str] = field(default_factory=list)
     config_weakenings: list[str] = field(default_factory=list)
     config_baseline_missing: bool = False
+    examples: object | None = None  # ExamplesReport when the layer is on
 
     def red_count(self) -> int:
         return (
@@ -337,6 +338,15 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         uncovered_source=mapping.uncovered_source,
         dead_pair_docs=mapping.dead_pair_docs,
     )
+
+    # executable-docs layer (opt-in, warn-only — the semantic layer never
+    # blocks a commit; that right belongs to the structural layer alone)
+    if cfg.examples:
+        from . import examples as examples_mod
+
+        result.examples = examples_mod.build(
+            repo_root, cfg.examples, list(mapping.doc_files)
+        )
 
     # config weakening (the backdoor check): red until accepted via ack --config
     baseline = ledger.read_config_ack(repo_root)
