@@ -21,6 +21,7 @@
 | `anchors.ignore` | strings | `[]` | exact tokens to skip |
 | `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks |
 | `anchors.path_roots` | paths | `[]` | extra prefixes tried when resolving doc-quoted paths (docs describing a deployed subtree, e.g. `[src]`) |
+| `examples` | map | `{}` (layer off) | executable-docs layer: fence tag → runner command that executes those blocks in your test suite, or `none` (display-only). staledocs never executes anything — it inventories the blocks, and any fenced block whose tag is unclassified is a yellow finding. Unwiring a runner (mapping → `none` or removal) counts as a config weakening |
 
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
@@ -114,7 +115,7 @@ confirmation.
 
 ```jsonc
 {
-  "staledocs": "1.1.0",
+  "staledocs": "1.2.0",
   "schema": 1,
   "gate": "warn",
   "summary": { "red": 2, "amber": 1, "green": 7 },
@@ -150,6 +151,11 @@ confirmation.
     "dead_pair_docs": [], "stale_ledger_docs": []
   },
   "config": { "weakenings": [], "baseline_missing": false },
+  "examples": {                       // null when the layer is off
+    "wired": { "python": 3 },         // runner-mapped blocks per tag
+    "per_doc": { "docs/auth.md": 3 },
+    "undeclared": [ { "doc": "docs/auth.md", "line": 40, "tag": "console" } ]
+  },
   "classification": { "paired": [], "standalone": [], "global": [] }
 }
 ```

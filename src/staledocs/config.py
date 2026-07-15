@@ -56,6 +56,9 @@ class Config:
     standalone: list[str] = field(default_factory=list)
     global_docs: list[str] = field(default_factory=list)
     anchors: AnchorRule = field(default_factory=AnchorRule)
+    # executable-docs layer (opt-in): fence tag -> runner command string, or
+    # None (declared display-only). Empty dict = layer off.
+    examples: dict[str, str | None] = field(default_factory=dict)
 
 
 def _require(cond: bool, msg: str) -> None:
@@ -149,6 +152,22 @@ def load(repo_root: Path) -> Config:
         path_roots=_str_list(anchors_raw.get("path_roots"), "anchors.path_roots"),
     )
 
+    examples_raw = raw.get("examples") or {}
+    _require(isinstance(examples_raw, dict), "examples must be a mapping of fence tag -> runner")
+    for tag, runner in examples_raw.items():
+        _require(
+            isinstance(tag, str) and tag.strip() != "",
+            "examples keys must be non-empty fence tags",
+        )
+        _require(
+            runner is None
+            or (isinstance(runner, str) and runner.strip() != "")
+            or runner == "none",
+            f"examples.{tag} must be a runner command string, or none (display-only)",
+        )
+        value = None if runner is None or runner == "none" else str(runner).strip()
+        cfg.examples[tag.strip().lower()] = value
+
     return cfg
 
 
@@ -194,4 +213,13 @@ anchors:
   ignore: []
   include_fenced: false
   path_roots: []   # extra prefixes for resolving doc-quoted paths (e.g. [src])
+
+# Executable-docs layer (opt-in): map each fence tag to the runner that
+# executes those blocks in your test suite, or to none (display-only).
+# staledocs never runs anything — it inventories the blocks and flags
+# unclassified tags so a forgotten wiring cannot stay silent.
+# examples:
+#   python: "pytest --doctest-glob='*.md'"
+#   console: "byexample"
+#   yaml: none
 """

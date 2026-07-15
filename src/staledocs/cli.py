@@ -382,6 +382,13 @@ def _pairs_health(
     from . import anchors as anchors_mod
 
     ctx = engine.make_mention_ctx(repo_root, cfg)
+    example_counts: dict[str, int] = {}
+    if cfg.examples:
+        from . import examples as examples_mod
+
+        example_counts = examples_mod.build(
+            repo_root, cfg.examples, list(resolved.doc_files)
+        ).per_doc
     rows: list[dict] = []
     for pair in resolved.pairs:
         mentions = anchors_mod.doc_mention_index(
@@ -405,6 +412,7 @@ def _pairs_health(
                 "total_anchors": mentions.total_anchors,
                 "always_red": mentions.total_anchors == 0,
                 "commits_since_ack": commits_behind,
+                "wired_examples": example_counts.get(pair.doc, 0),
             }
         )
 

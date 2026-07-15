@@ -97,6 +97,18 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
     for f in result.anchor_findings:
         lines.append(red(f"[anchor] {f.doc}:{f.line} `{f.token}` not found in {f.scope} scope"))
 
+    if result.examples is not None and result.examples.enabled:
+        for block in result.examples.undeclared:
+            lines.append(
+                yellow(
+                    f"[examples] {block.doc}:{block.line} fenced `{block.tag}` block "
+                    f"not classified — map it to a runner in examples:, or to none"
+                )
+            )
+        if result.examples.wired:
+            wired = ", ".join(f"{t} x{n}" for t, n in sorted(result.examples.wired.items()))
+            lines.append(dim(f"[examples] runner-wired blocks: {wired}"))
+
     reds = result.red_count()
     ambers = result.amber_count()
     greens = sum(1 for p in result.pairs if p.state == GREEN)
@@ -158,6 +170,15 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "weakenings": result.config_weakenings,
             "baseline_missing": result.config_baseline_missing,
         },
+        "examples": (
+            None
+            if result.examples is None or not result.examples.enabled
+            else {
+                "wired": result.examples.wired,
+                "per_doc": result.examples.per_doc,
+                "undeclared": [asdict(b) for b in result.examples.undeclared],
+            }
+        ),
         "classification": {
             "paired": [p.doc for p in mapping.pairs],
             "standalone": mapping.standalone_docs,
