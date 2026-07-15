@@ -11,7 +11,7 @@
 | `docs.include` | globs | `docs/**/*.md`, `README.md` | files treated as docs |
 | `docs.exclude` | globs | `[]` | |
 | `pairs[].doc` | path | | literal doc path (one entry per doc) |
-| `pairs[].code` | globs | | code owned by that doc |
+| `pairs[].code` | globs | | what this doc tracks: source files **or other docs** — pairing a doc to an upstream doc declares a chained-drift link (requirements ↔ design ↔ code), same ledger, same anchor grading; a doc never pairs to itself |
 | `mirror.enabled` | bool | `false` | convention pairing `docs/<x>.md` ↔ `<code_root>/<x>/**` and `<code_root>/<x>.*` |
 | `mirror.docs_root` | path | `docs` | |
 | `mirror.code_roots` | paths | `[src]` | |
@@ -78,7 +78,7 @@ ack auto-advances the baseline when nothing weakened.
 
 | Command | Purpose |
 |---|---|
-| `staledocs init` | scaffold config + ledger dir |
+| `staledocs init [--suggest]` | scaffold config + ledger dir; `--suggest` prints a paste-ready pairs proposal derived from each doc's own anchors (works standalone on an existing config, never writes) |
 | `staledocs check [--json] [--all] [--gate warn\|strict]` | run all deterministic checks |
 | `staledocs ack <doc...> [--all] [--broken] [--prune] [--confirm TOKEN] [--config] [-m note]` | record coherence (two-step for broken pairs) |
 | `staledocs explain [doc...] [--json]` | evidence view for broken pairs — never gates |
@@ -114,7 +114,7 @@ confirmation.
 
 ```jsonc
 {
-  "staledocs": "1.0.0",
+  "staledocs": "1.1.0",
   "schema": 1,
   "gate": "warn",
   "summary": { "red": 2, "amber": 1, "green": 7 },
