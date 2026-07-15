@@ -1,9 +1,9 @@
 {
   "ack": {
-    "at": "2026-07-15T18:35:05+00:00",
+    "at": "2026-07-15T18:38:24+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "3ed1f8c6e36965a2b82bd7d449c83da7902f007e",
-      "src/staledocs/anchors.py": "2f4b6911a05c2a618e32fda5df298432cc360ac1",
+      "src/staledocs/anchors.py": "a5ca3692e29ad6bc713d6b979dd2fd72de0b1aa3",
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
       "src/staledocs/config.py": "4438ab71b26ed1a26bfa5458a3b56fc4109321e6",
       "src/staledocs/engine.py": "9366a95750a4b393c38bcba0e67ca383cebf8baf",
@@ -15,9 +15,9 @@
       "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "845af9536b691330a290c08170d389df0f3b44e8",
+    "commit": "ec33dcdf95e000dce7b0caff12c41f1346aeb7ff",
     "doc_blob": "dac720876ae6599d5a52270df136274b37023b49",
-    "note": "verified against mapping.py/report.py: out_of_scope_pair_code now documented in README.md red list and check --json coverage example"
+    "note": "anchors.py change verified: call-notation-with-slash now falls back to the bare identifier before the path branch, matching the reference's existing promise; no doc statement needed changing"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
