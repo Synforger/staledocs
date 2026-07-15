@@ -335,3 +335,29 @@ def test_ignore_literal_entry_stays_exact(tmp_path: Path):
     rule = AnchorRule(min_length=3, ignore=["issue_token"])
     found = anchors.extract("d.md", "`issue_token` and `open_session` here.\n", rule)
     assert [a.token for a in found] == ["open_session"]
+
+
+def test_assignment_with_absolute_path_value_falls_back_to_bare_name(tmp_path: Path):
+    # `TOOL_PATH=/usr/bin/tool` quoted in a setup doc: the slash lives in the
+    # assigned value; the token is assignment notation and falls back to the
+    # variable name, which is what the paired code actually contains
+    (tmp_path / "conf.py").write_text('TOOL_PATH = os.environ["TOOL_PATH"]\n', encoding="utf-8")
+    found = anchors.extract("d.md", "Set `TOOL_PATH=/usr/bin/tool` for tests.\n", RULE)
+    assert [(a.token, a.path_like) for a in found] == [("TOOL_PATH=/usr/bin/tool", False)]
+    idx = CodeIndex(tmp_path, ["conf.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert findings == []
+
+
+def test_assignment_to_unknown_variable_still_reds_on_the_bare_name(tmp_path: Path):
+    (tmp_path / "conf.py").write_text("OTHER = 1\n", encoding="utf-8")
+    found = anchors.extract("d.md", "Set `GONE_VAR=/usr/bin/tool` for tests.\n", RULE)
+    idx = CodeIndex(tmp_path, ["conf.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert [f.token for f in findings] == ["GONE_VAR=/usr/bin/tool"]
+
+
+def test_path_with_equals_after_slash_stays_a_path():
+    # query-ish or annotated path where `=` appears past the first slash
+    got = anchors.extract("d.md", "See `docs/api?v=2` notes.\n", RULE)
+    assert [(a.token, a.path_like) for a in got] == [("docs/api?v=2", True)]
