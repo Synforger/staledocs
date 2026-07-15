@@ -18,6 +18,55 @@ staledocs removes the remembering. It pairs every doc with the code it
 describes, records a fingerprint when you confirm they match, and from then
 on any one-sided change is flagged mechanically — in either direction.
 
+## What it catches
+
+Every failure class below is detected deterministically — same input, same
+verdict, no model in the loop:
+
+| Failure | Example | Detected by |
+|---|---|---|
+| Code changed, doc kept describing the old behaviour | auth flow rewritten, the auth doc still shows the old sequence | pair ledger |
+| Doc changed, code never followed (unimplemented spec) | a design doc gained a requirement nobody built | pair ledger (symmetric) |
+| Doc references something that no longer exists | README quotes a CLI flag deleted two releases ago, a renamed function, a moved file | anchor liveness, exact doc line |
+| New code nobody documented | a new module lands with no owning doc | coverage gate |
+| Doc whose code counterpart vanished | the doc for a deleted subsystem lives on, misleading readers | orphan detection |
+| Checks quietly weakened | someone removed a pair or grew the ignore list to silence the tool | config baseline |
+| A stamp given without looking | an agent (or a tired human) acks a break unread | two-step evidence ack |
+
+What it deliberately does **not** catch: prose whose meaning drifted while
+every referenced identifier still exists (see
+[Limitations](#limitations-honest-ones)).
+
+## Use cases
+
+- **Guardrail for AI-agent development.** Agents change code at a pace docs
+  never survive. Wire `check --gate strict` into pre-commit/CI and agents
+  are mechanically forced to keep docs current — and cannot rubber-stamp
+  their way past the gate, because the two-step ack makes them read the
+  evidence first.
+- **Design doc ↔ implementation.** Pair your design doc with `src/**` and
+  the spec stops silently diverging from the build — in both directions
+  (`CODE_LAG` catches the unbuilt spec, not just the stale doc).
+- **README rot prevention.** Declare README `global` and every flag, path,
+  and identifier it quotes is grep-verified on every commit — the exact
+  line that rotted, not "something changed somewhere".
+- **Onboarding-doc trust.** Team setup guides are read by people who cannot
+  yet tell stale from current. A strict gate means the guide a newcomer
+  follows was mechanically checked against the tree they just cloned.
+- **Brownfield docs audit.** Point it at an existing repo in `gate: warn`
+  mode and get an inventory of dead references and unowned code before
+  committing to anything.
+
+## Any language
+
+The target repo needs git and Markdown docs — nothing else. Code is only
+ever grepped, never parsed, so Python, TypeScript, Rust, Go, shell, or a
+mixed monorepo all behave identically. Python 3.11+ is required only on the
+machine that *runs* the tool (dev box, CI runner); the target repo carries
+just `.staledocs.yaml` and the ledger. For non-Python projects,
+`pipx install staledocs` (or `uv tool install staledocs`) keeps it out of
+the project's dependency tree entirely.
+
 ## How it works
 
 Four detection layers; the first three are deterministic, no AI anywhere:
@@ -143,7 +192,8 @@ staledocs check --gate strict || exit 1
 ```
 
 Start with `gate: warn` while onboarding a brownfield repo, flip to
-`strict` once `check` is quiet.
+`strict` once `check` is quiet. Exit codes: `0` ok, `1` gate failure,
+`2` usage error, `3` ack pending confirmation.
 
 ## AI-agent integration
 
@@ -173,6 +223,25 @@ Prior art: the coherence-driven idea owes a nod to
 [CoDD](https://github.com/yohey-w/codd-dev), which attacks the same problem
 from the generative side. staledocs deliberately takes the opposite bet:
 detect deterministically, generate nothing.
+
+## Limitations (honest ones)
+
+- **Semantic lies are invisible to the deterministic layers.** If code and
+  doc are edited together but the prose now misdescribes the behaviour —
+  while every quoted identifier still exists — no layer here can prove it.
+  That judgement is the ack's job, which is why the ack shows evidence and
+  demands a note instead of pretending certainty. Making doc claims
+  *executable* (doctest-style examples wired into your test runner) is the
+  one deterministic escape hatch, and staledocs is designed to sit next to
+  such tools, not replace them.
+- **Grading quality tracks quoting habit.** Line-granularity red needs the
+  doc to quote paths and identifiers in backticks. A doc with no anchors
+  cannot be graded and stays red on any code move — `pairs --health` lists
+  these. The incentive points the right way: the more precisely a doc cites
+  its subject, the more precisely it is protected.
+- **Thin-docs repos get thin value.** A repo with two Markdown files has
+  little for the tool to guard. That is a property, not a defect — value
+  scales with how much documentation you chose to have.
 
 ## License
 

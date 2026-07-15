@@ -60,3 +60,28 @@ a path allowlist to your repo's gitleaks config:
 description = "staledocs pair ledger stores git blob hashes, not secrets"
 paths = ['''\.staledocs/pairs/.*\.json$''']
 ```
+
+## `ack` exits 3 and nothing was recorded
+
+**Symptom**: `staledocs ack docs/x.md` prints an evidence block plus a
+`--confirm <token>` line and exits `3`; the ledger did not change.
+**Cause**: not an error — this is step 1 of the two-step ack for broken
+pairs. **Fix**: read the evidence, then rerun with
+`--confirm <token> -m '<note>'`. Exit `3` specifically means "pending
+confirmation" so hooks can tell it apart from a real failure (`1`) or a
+usage error (`2`).
+
+## Confirm refused: "note must name something from the evidence"
+
+**Symptom**: step 2 of an ack fails even with a token. **Cause**: the note
+is a rubber stamp — it names nothing the evidence showed. **Fix**: mention
+a changed file, a quoted anchor, or the doc itself
+(`-m 'issue_token return shape unchanged, doc still accurate'`). The check
+is deterministic substring matching, not semantic judgement.
+
+## Confirm refused: "evidence token mismatch"
+
+**Symptom**: `--confirm` fails with a token you just received. **Cause**:
+either side of the pair moved between step 1 and step 2 — the evidence you
+read is no longer the state you are stamping. **Fix**: rerun `staledocs
+ack` and read the fresh evidence; the new token supersedes the old one.
