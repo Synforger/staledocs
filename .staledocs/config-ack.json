@@ -1,6 +1,14 @@
 {
   "accepted": {
     "anchors": {
+      "branch_prefixes": [
+        "chore",
+        "feature",
+        "fix",
+        "hotfix",
+        "origin",
+        "release"
+      ],
       "ignore": [
         "*/[dm][ea][vi][!o]*",
         "feature/main",
@@ -27,7 +35,7 @@
       "src/**"
     ]
   },
-  "at": "2026-07-15T18:38:24+00:00",
+  "at": "2026-07-15T18:43:47+00:00",
   "note": "advanced by pair ack (no weakening)",
   "schema": 1
 }

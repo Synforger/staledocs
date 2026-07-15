@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T18:34:36+00:00",
+    "at": "2026-07-15T18:43:47+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "dac720876ae6599d5a52270df136274b37023b49",
+      "docs/reference/README.md": "4e6223d785d59ea5254413de84c77d464eda4d83",
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
-      "src/staledocs/engine.py": "9366a95750a4b393c38bcba0e67ca383cebf8baf",
+      "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
       "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf"
     },
-    "commit": "845af9536b691330a290c08170d389df0f3b44e8",
+    "commit": "08905d37e318208a9e62ec8d92670fd74a982248",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "engine.py/report.py change only adds the out_of_scope_pair_code finding; agent-integration.md's JSON-consumption guidance unaffected (keys only added, per the compatibility promise)"
+    "note": "verified: engine.py/cli.py surface unchanged for agents \u2014 branch_prefixes only removes false-positive reds; JSON keys only added"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

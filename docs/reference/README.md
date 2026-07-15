@@ -21,6 +21,7 @@
 | `anchors.ignore` | strings | `[]` | exact tokens to skip |
 | `anchors.include_fenced` | bool | `false` | also extract anchors inside fenced code blocks |
 | `anchors.path_roots` | paths | `[]` | extra prefixes tried when resolving doc-quoted paths (docs describing a deployed subtree, e.g. `[src]`) |
+| `anchors.branch_prefixes` | strings | `[feature, fix, hotfix, release, chore, origin]` | quoted git branch names are not paths: a slash token starting with one of these skips path verification when no such tracked path exists; `[]` disables |
 | `examples` | map | `{}` (layer off) | executable-docs layer: fence tag → runner command that executes those blocks in your test suite, or `none` (display-only). staledocs never executes anything — it inventories the blocks, and any fenced block whose tag is unclassified is a yellow finding. Unwiring a runner (mapping → `none` or removal) counts as a config weakening |
 
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
@@ -70,7 +71,8 @@ Weakening the checks is itself a checked event. `check` compares the current
 (`.staledocs/config-ack.json`) and reds every weakening direction: gate
 `strict` → `warn`, a pair removed, `source.include` dropped or
 `source.exclude` added (scope narrowed), same for docs scope,
-`anchors.min_length` raised, `anchors.ignore` grown, `include_fenced`
+`anchors.min_length` raised, `anchors.ignore` grown, `branch_prefixes`
+grown, `include_fenced`
 switched off. Strengthening directions never fire.
 
 Accept a deliberate weakening with `staledocs ack --config -m '<why>'` —

@@ -279,3 +279,37 @@ def test_path_with_parens_after_slash_stays_a_path():
     # a genuine path whose later segment contains parens keeps path semantics
     got = anchors.extract("d.md", "Kept under `src/legacy/util(old).py` for now.\n", RULE)
     assert [(a.token, a.path_like) for a in got] == [("src/legacy/util(old).py", True)]
+
+
+def test_branch_prefix_token_skips_path_verification(tmp_path: Path):
+    # `feature/dark-mode` is a quoted branch name, not a rotted path
+    found = anchors.extract("d.md", "Cut `feature/dark-mode` from develop.\n", RULE)
+    idx = CodeIndex(tmp_path, [])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, idx, idx, set(), set(),
+        branch_prefixes=["feature", "fix"],
+    )
+    assert findings == []
+
+
+def test_branch_prefix_skip_disabled_with_empty_list(tmp_path: Path):
+    found = anchors.extract("d.md", "Cut `feature/dark-mode` from develop.\n", RULE)
+    idx = CodeIndex(tmp_path, [])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, idx, idx, set(), set(), branch_prefixes=[],
+    )
+    assert [f.token for f in findings] == ["feature/dark-mode"]
+
+
+def test_tracked_path_under_branch_prefix_dir_still_verifies(tmp_path: Path):
+    # a repo genuinely containing a feature/ dir: existing paths pass on the
+    # tree, dead paths under it are skipped only because the prefix matches —
+    # the tracked-file check runs first either way
+    files = {"feature/flags.py"}
+    found = anchors.extract("d.md", "See `feature/flags.py`.\n", RULE)
+    idx = CodeIndex(tmp_path, [])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, idx, idx, files, anchors.dirs_of(files),
+        branch_prefixes=["feature"],
+    )
+    assert findings == []
