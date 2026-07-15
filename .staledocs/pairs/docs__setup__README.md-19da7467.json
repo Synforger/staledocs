@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-15T20:16:51+00:00",
+    "at": "2026-07-15T20:24:55+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "4b9526a009a6f2b67aec0ff3a6102700f86952a6",
+      "src/staledocs/cli.py": "7cb911f027ae8b69dd1be92049b62d5705c53e65",
       "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681"
     },
-    "commit": "3fac478d3131b99d67d841dcb5e3f453b57a1d84",
+    "commit": "f6072614f0cb7e762ded4c46d91c7997a6c31f89",
     "doc_blob": "d207161d2b9ab5d7fbf4a80fc925c8dc6502f7a9",
-    "note": "verified docs/setup/README.md against cli.py/report.py: init now records the baseline itself, first ack --config wording split from weakening approval; setup README.md onboarding step updated to match"
+    "note": "setup README.md untouched in substance; pair amber from cli.py motion only, onboarding flow wording still accurate"
   },
   "doc": "docs/setup/README.md",
   "schema": 1

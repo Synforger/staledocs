@@ -161,6 +161,13 @@ def render_evidence(evidence: dict, color: bool | None = None) -> str:
             lines.append(dim(f"    doc  L{dl['line']}: {dl['text']}"))
         for cl in hit["changed_lines"]:
             lines.append(dim(f"    diff       : {cl}"))
+    for claim in evidence.get("claims", []):
+        if claim["kind"] == "path":
+            lines.append(red(f"  doc claims file: {claim['file']}"))
+        else:
+            lines.append(red(f"  doc claims `{claim['token']}`"))
+        for dl in claim["doc_lines"]:
+            lines.append(dim(f"    doc  L{dl['line']}: {dl['text']}"))
     if not evidence["hits"] and evidence.get("detail"):
         lines.append(dim(f"  {evidence['detail']}"))
     return "\n".join(lines)

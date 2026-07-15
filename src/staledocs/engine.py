@@ -63,6 +63,8 @@ class PairReport:
     detail: str = ""
     mentioned_changed: list[str] = field(default_factory=list)
     hit_anchors: list[AnchorHit] = field(default_factory=list)
+    # first-ack evidence: the doc's own quoted claims (no baseline to diff)
+    claims: list[AnchorHit] = field(default_factory=list)
 
 
 @dataclass
@@ -266,7 +268,36 @@ def check_pair(
     )
     ack = ledger.read_ack(repo_root, pair.doc)
     if ack is None:
-        report.detail = "no ack recorded (or ledger entry unreadable — fail-safe)"
+        # first ack: no baseline exists, so there is no diff to intersect —
+        # the evidence becomes the doc's OWN claims (every path and
+        # identifier it quotes, with doc lines), and the note check demands
+        # one of those claims be named. Without this, the first stamp — on
+        # the very day docs are most likely rotten — passed on a bare file
+        # name, and the read-before-you-stamp contract was vacuous exactly
+        # once per pair.
+        if mention_ctx is not None:
+            mentions = anchors_mod.doc_mention_index(
+                repo_root,
+                pair.doc,
+                mention_ctx.anchors_rule,
+                mention_ctx.all_files,
+                mention_ctx.all_dirs,
+                mention_ctx.path_roots,
+            )
+            for rel, lines in sorted(mentions.path_files.items()):
+                report.claims.append(
+                    AnchorHit(file=rel, token=rel, kind="path", doc_lines=sorted(set(lines)))
+                )
+            for token, lines in sorted(mentions.idents.items()):
+                report.claims.append(
+                    AnchorHit(file="", token=token, kind="ident", doc_lines=sorted(set(lines)))
+                )
+        report.detail = (
+            "first ack: no baseline to diff against — the evidence is the "
+            "doc's own claims above; verify each against the code"
+            if report.claims
+            else "no ack recorded (or ledger entry unreadable — fail-safe)"
+        )
         return report
 
     ack, absorbed = _effective_ack(repo_root, pair, ack)
@@ -496,6 +527,17 @@ def build_evidence(repo_root: Path, report: PairReport) -> dict:
         }
         for h in report.hit_anchors
     ]
+    claims = [
+        {
+            "file": c.file,
+            "token": c.token,
+            "kind": c.kind,
+            "doc_lines": [
+                {"line": ln, "text": _excerpt(ln)} for ln in c.doc_lines[:_SNIPPET_LIMIT]
+            ],
+        }
+        for c in report.claims
+    ]
     return {
         "doc": report.doc,
         "state": report.state,
@@ -506,6 +548,7 @@ def build_evidence(repo_root: Path, report: PairReport) -> dict:
         "doc_changed": report.doc_changed,
         "detail": report.detail,
         "hits": hits,
+        "claims": claims,
     }
 
 
@@ -517,6 +560,16 @@ def note_references_evidence(note: str, report: PairReport) -> bool:
     if not text:
         return False
     candidates: set[str] = set()
+    if report.state == UNACKED and report.claims:
+        # first ack: the note must name one of the doc's own claims — the
+        # doc's or a code file's bare name is exactly the vacuous stamp this
+        # mode exists to prevent
+        for c in report.claims:
+            candidates.add(c.token)
+            if c.file:
+                candidates.add(c.file)
+                candidates.add(c.file.rsplit("/", 1)[-1])
+        return any(c and c in text for c in candidates)
     for rel in report.changed_code:
         candidates.add(rel)
         candidates.add(rel.rsplit("/", 1)[-1])
