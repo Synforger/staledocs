@@ -236,10 +236,21 @@ def ack(
     green = [d for d in targets if _report(d).state == engine.GREEN]
     pending = [d for d in targets if d not in green]
 
-    # step 2: confirm against the token computed when the evidence was shown
+    # step 2: confirm against the token computed when the evidence was shown.
+    # One token confirms exactly one pending pair — a single token that
+    # unlocks N pairs would let an unread doc ride through on a note written
+    # about a different one, which is the exact hole the two-step ack exists
+    # to close. Bulk flags only batch step 1 (all evidence + all tokens in
+    # one run); every confirm names its own doc.
     if pending and confirm is not None:
+        if len(pending) > 1:
+            raise click.UsageError(
+                "one --confirm token acks one pair — run the per-doc commands "
+                "printed by the evidence step (bulk flags batch the evidence, "
+                "not the confirmation)"
+            )
         token = engine.aggregate_token(
-            [engine.pair_fingerprint(repo_root, by_doc[d]) for d in pending]
+            [engine.pair_fingerprint(repo_root, by_doc[pending[0]])]
         )
         if confirm != token:
             raise click.ClickException(
@@ -248,31 +259,26 @@ def ack(
             )
         if not note.strip():
             raise click.UsageError("confirming an ack requires a non-empty --note")
-        # the note-content check applies to explicitly named single-doc acks;
-        # bulk paths (--all/--broken, onboarding baselines) require substance
-        # only in the non-empty sense — there is no single evidence to name
-        if (
-            bool(docs)
-            and len(pending) == 1
-            and not engine.note_references_evidence(note, _report(pending[0]))
-        ):
+        if not engine.note_references_evidence(note, _report(pending[0])):
             raise click.ClickException(
                 "note must name something from the evidence "
                 "(a changed file, a quoted anchor, or the doc)"
             )
     elif pending:
-        # step 1: show the evidence, hand out the token, change nothing
+        # step 1: show the evidence and hand out one token per pair
+        if len(pending) > 1:
+            click.echo(f"{len(pending)} pending pairs — each needs its own confirm:")
+            click.echo()
         for doc in pending:
             click.echo(report.render_evidence(engine.build_evidence(repo_root, _report(doc))))
+            token = engine.aggregate_token(
+                [engine.pair_fingerprint(repo_root, by_doc[doc])]
+            )
+            click.echo(
+                f"pending: read the evidence above, then\n"
+                f"  staledocs ack {doc} --confirm {token} -m '<what you verified>'"
+            )
             click.echo()
-        token = engine.aggregate_token(
-            [engine.pair_fingerprint(repo_root, by_doc[d]) for d in pending]
-        )
-        names = " ".join(pending) if docs else ("--all" if ack_all else "--broken")
-        click.echo(
-            f"pending: read the evidence above, then\n"
-            f"  staledocs ack {names} --confirm {token} -m '<what you verified>'"
-        )
         for doc in green:
             engine.ack_pair(repo_root, by_doc[doc], note=note)
             click.echo(f"acked {doc} (green refresh)")

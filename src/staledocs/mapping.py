@@ -36,6 +36,7 @@ class MappingResult:
     orphan_pairs: list[str] = field(default_factory=list)
     uncovered_source: list[str] = field(default_factory=list)
     dead_pair_docs: list[str] = field(default_factory=list)
+    out_of_scope_pair_code: list[str] = field(default_factory=list)
     source_files: list[str] = field(default_factory=list)
     doc_files: list[str] = field(default_factory=list)
 
@@ -99,6 +100,17 @@ def resolve(cfg: Config, all_files: list[str]) -> MappingResult:
         code_files = [
             f for f in pairable if f != rule.doc and globs.match_any(rule.code, f)
         ]
+        # A pattern that matches tracked files but contributes nothing pairable
+        # means the pair silently covers less than its author declared — the
+        # exact quiet-weakening class this tool exists to surface. Never drop
+        # it without a finding.
+        pairable_set = set(pairable)
+        for pattern in rule.code:
+            tracked_hits = [
+                f for f in all_files if f != rule.doc and globs.match_any([pattern], f)
+            ]
+            if tracked_hits and not any(f in pairable_set for f in tracked_hits):
+                result.out_of_scope_pair_code.append(f"{rule.doc}: {pattern}")
         result.pairs.append(
             ResolvedPair(
                 doc=rule.doc,
@@ -144,4 +156,5 @@ def resolve(cfg: Config, all_files: list[str]) -> MappingResult:
     result.global_docs.sort()
     result.orphan_pairs.sort()
     result.dead_pair_docs.sort()
+    result.out_of_scope_pair_code.sort()
     return result

@@ -10,6 +10,7 @@ point at the exact doc line that rotted.
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -79,6 +80,14 @@ def _looks_like_code(token: str, min_length: int) -> bool:
 def _is_path_like(token: str) -> bool:
     if "://" in token:  # URL, not a repo path
         return False
+    # call/assignment notation whose right side happens to contain a slash —
+    # `exp(−d/λ)`, `VAR=/usr/bin/tool` — is an identifier, not a path: the
+    # reference promises the bare-identifier fallback for these notations,
+    # and the path branch must not capture them first. A real path never has
+    # `(` or `=` before its first `/`.
+    for sep in ("(", "="):
+        if sep in token and ("/" not in token or token.index(sep) < token.index("/")):
+            return False
     return "/" in token.strip("/") or token.startswith("./")
 
 
@@ -87,7 +96,17 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
     anchors: list[Anchor] = []
     in_fence = False
     fence_marker = ""
-    ignore = set(rule.ignore)
+    # two-stage ignore: exact match first (an entry always suppresses its own
+    # literal token, glob metacharacters included), then fnmatch for entries
+    # that carry glob characters — `research/*` covers ten sections in one
+    # line instead of ten
+    ignore_exact = set(rule.ignore)
+    ignore_globs = [p for p in rule.ignore if any(ch in p for ch in "*?[")]
+
+    def _token_ignored(token: str) -> bool:
+        if token in ignore_exact:
+            return True
+        return any(fnmatch.fnmatchcase(token, p) for p in ignore_globs)
     for lineno, line in enumerate(text.splitlines(), start=1):
         fence = _FENCE_RE.match(line)
         if fence:
@@ -102,7 +121,7 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
             continue
         for m in _SPAN_RE.finditer(line):
             token = (m.group(1) or m.group(2) or "").strip()
-            if not token or token in ignore:
+            if not token or _token_ignored(token):
                 continue
             if not _looks_like_code(token, rule.min_length):
                 continue
@@ -213,6 +232,7 @@ def verify(
     all_dirs: set[str],
     path_roots: list[str] | None = None,
     check_ignored: Callable[[list[str]], set[str]] | None = None,
+    branch_prefixes: list[str] | None = None,
 ) -> list[AnchorFinding]:
     """Findings for anchors that no longer resolve.
 
@@ -267,6 +287,13 @@ def verify(
             if _path_exists(
                 token, all_files, all_dirs, path_roots, anchor.doc_dir
             ) or _ignored(token, anchor.doc_dir):
+                continue
+            # a slash token whose first segment is a branch prefix and which
+            # resolves to no tracked path is a quoted branch name, not a
+            # rotted path (`feature/dark-mode`); a real tracked path with
+            # that prefix already passed above
+            first_seg = token.strip("/").split("/", 1)[0]
+            if branch_prefixes and first_seg in branch_prefixes:
                 continue
             findings.append(
                 AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")

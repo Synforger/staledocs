@@ -144,6 +144,7 @@ def config_snapshot(cfg: object) -> dict:
             "min_length": cfg.anchors.min_length,
             "ignore": sorted(cfg.anchors.ignore),
             "include_fenced": cfg.anchors.include_fenced,
+            "branch_prefixes": sorted(cfg.anchors.branch_prefixes),
         },
         "examples_wired": sorted(
             tag for tag, runner in getattr(cfg, "examples", {}).items() if runner
@@ -213,6 +214,13 @@ def config_weakenings(old: dict, new: dict) -> list[str]:
     for tok in new_a.get("ignore", []):
         if tok not in old_a.get("ignore", []):
             out.append(f"anchor ignore added: {tok!r}")
+    # baselines recorded before this key existed carry the defaults implicitly
+    from .config import DEFAULT_BRANCH_PREFIXES
+
+    old_prefixes = old_a.get("branch_prefixes", sorted(DEFAULT_BRANCH_PREFIXES))
+    for pfx in new_a.get("branch_prefixes", []):
+        if pfx not in old_prefixes:
+            out.append(f"anchor branch prefix added: {pfx!r}")
     if old_a.get("include_fenced") and not new_a.get("include_fenced"):
         out.append("fenced-block anchors disabled: include_fenced true -> false")
     for tag in old.get("examples_wired", []):

@@ -1,14 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T07:09:40+00:00",
+    "at": "2026-07-15T19:15:35+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "52f378ed1d5c08e280bb3aa241e279bce54990c1",
-      "src/staledocs/engine.py": "f120ccddf65c4eb1ccc431a82878803730930e87",
-      "src/staledocs/report.py": "cd2f4f666005f6af63c4b946700cde25fa3ba48c"
+      "docs/reference/README.md": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
+      "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
+      "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
+      "src/staledocs/report.py": "a334ecddd1b6d2ebc9a6dd40059ca1b7ab2159c4"
     },
-    "commit": "e99a2e5f09d6cbfa9c75fb6ce3fc4c9284ab60da",
+    "commit": "06073de32d619f47063b767477ff2ddab661ac25",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "v0.2 rewrite: cli.py/engine.py/report.py two-step ack + explain + config baseline, docs updated in this worktree"
+    "note": "report.py hint is human-output only; the JSON contract cli.py serves agents is untouched"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

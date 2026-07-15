@@ -109,8 +109,8 @@ cd your-repo
 staledocs init --suggest  # scaffold config + print a pairs proposal from your docs' own anchors
 $EDITOR .staledocs.yaml   # review the proposal, paste, adjust (see below)
 staledocs check           # see what's unowned / unacked
-staledocs ack --all       # baseline step 1: evidence + token (exit 3)
-staledocs ack --all --confirm <token> -m 'onboarding baseline'
+staledocs ack --all       # step 1: every pending pair's evidence, one token each (exit 3)
+staledocs ack <doc> --confirm <token> -m '<what you verified>'   # once per pair
 ```
 
 From then on:
@@ -150,6 +150,11 @@ standalone:                # docs that intentionally have no code side
   - "docs/ops/**"
 global:                    # whole-repo docs: anchors only, no pair ledger
   - README.md
+
+anchors:                   # the liveness layer's dials (all optional)
+  min_length: 3
+  ignore: []               # tokens to skip — exact, or globs when the entry has * ? [
+  include_fenced: false
 ```
 
 Explicit pairs win over the mirror convention. N:M is natural — one file may
@@ -198,7 +203,10 @@ staledocs check --gate strict || exit 1
 ```
 
 Start with `gate: warn` while onboarding a brownfield repo, flip to
-`strict` once `check` is quiet. Exit codes: `0` ok, `1` gate failure,
+`strict` once `check` is quiet — the first run prints dozens of findings
+on a real repo, and [docs/setup](docs/setup/README.md) has the triage
+table (real rot / quoted non-identifiers / scope gaps / undeclared pairs)
+plus the three flip criteria. Exit codes: `0` ok, `1` gate failure,
 `2` usage error, `3` ack pending confirmation.
 
 ## AI-agent integration
@@ -248,6 +256,13 @@ detect deterministically, generate nothing.
   cannot be graded and stays red on any code move — `pairs --health` lists
   these. The incentive points the right way: the more precisely a doc cites
   its subject, the more precisely it is protected.
+- **Planned references have no special marker.** A doc quoting a path that
+  does not exist *yet* reds like any rotted path — the tool cannot tell a
+  plan from a corpse. The working conventions: planned layouts go in
+  fenced code blocks (not extracted by default), plan documents stay out
+  of the docs scope, and a paired spec running ahead of the code is the
+  CODE_LAG state by design — ack it as "spec ahead". See the triage table
+  in [docs/setup](docs/setup/README.md).
 - **Thin-docs repos get thin value.** A repo with two Markdown files has
   little for the tool to guard. That is a property, not a defect — value
   scales with how much documentation you chose to have.

@@ -1,21 +1,23 @@
 {
   "ack": {
-    "at": "2026-07-15T07:09:40+00:00",
+    "at": "2026-07-15T19:24:46+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "bef3dc5167e307ac95b1b35e93a2d01c333f4eb8",
-      "src/staledocs/anchors.py": "2f4b6911a05c2a618e32fda5df298432cc360ac1",
-      "src/staledocs/cli.py": "52f378ed1d5c08e280bb3aa241e279bce54990c1",
-      "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3",
-      "src/staledocs/engine.py": "f120ccddf65c4eb1ccc431a82878803730930e87",
-      "src/staledocs/gitio.py": "9fdbbfd8d35abb6a96562bfcce972945011005c3",
+      "src/staledocs/__init__.py": "556a9c0325606f35cff4671bfcb2c0ec201ecdaf",
+      "src/staledocs/anchors.py": "ebcfdb07e5aeb7e4cce879d3bf67eb8e94189a04",
+      "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
+      "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681",
+      "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
+      "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
+      "src/staledocs/gitio.py": "fe0a1d0dd7f16281c22f56a7b2cdf6c01a4cf8e3",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
-      "src/staledocs/ledger.py": "e32cb04970aaaf28b368a1676a1baede26e2106a",
-      "src/staledocs/mapping.py": "73a6cdae305c610708eadba0614f59b8f8e9961c",
-      "src/staledocs/report.py": "cd2f4f666005f6af63c4b946700cde25fa3ba48c"
+      "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
+      "src/staledocs/mapping.py": "a3b9785b5510a0e38b305d93a4072ace8299bbd0",
+      "src/staledocs/report.py": "a334ecddd1b6d2ebc9a6dd40059ca1b7ab2159c4",
+      "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "e99a2e5f09d6cbfa9c75fb6ce3fc4c9284ab60da",
-    "doc_blob": "49229a8ced8c8c96f805573b94c3743744fa082b",
-    "note": "v0.2 rewrite: cli.py/engine.py/report.py two-step ack + explain + config baseline, docs updated in this worktree"
+    "commit": "80c4e4f1e30ed76bc7ec0c5aba1045128574d4fa",
+    "doc_blob": "ec2ef8bf9c61cbdc62db957687d7d321cec459d1",
+    "note": "version bump only: __init__.py __version__ 1.2.0 -> 1.3.0, no behavior described by the doc changed"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

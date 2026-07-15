@@ -259,3 +259,105 @@ def test_symbol_anchor_into_gitignored_file_passes(tmp_path: Path):
         set(), set(), check_ignored=ignored,
     )
     assert findings == []
+
+
+def test_call_notation_with_slash_in_args_is_not_a_path(tmp_path: Path):
+    # `exp(−d/λ)` — a formula quoted in a design doc. The slash lives inside
+    # the call arguments; the path branch must not capture the token before
+    # the bare-identifier fallback (field-reported: the whole token went red
+    # while the reference promised the `exp` fallback).
+    (tmp_path / "model.py").write_text("import numpy as np\np = np.exp(-d)\n", encoding="utf-8")
+    text = "Connection probability decays as `exp(−d/λ)` with distance.\n"
+    found = anchors.extract("d.md", text, RULE)
+    assert [(a.token, a.path_like) for a in found] == [("exp(−d/λ)", False)]
+    idx = CodeIndex(tmp_path, ["model.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert findings == []
+
+
+def test_path_with_parens_after_slash_stays_a_path():
+    # a genuine path whose later segment contains parens keeps path semantics
+    got = anchors.extract("d.md", "Kept under `src/legacy/util(old).py` for now.\n", RULE)
+    assert [(a.token, a.path_like) for a in got] == [("src/legacy/util(old).py", True)]
+
+
+def test_branch_prefix_token_skips_path_verification(tmp_path: Path):
+    # `feature/dark-mode` is a quoted branch name, not a rotted path
+    found = anchors.extract("d.md", "Cut `feature/dark-mode` from develop.\n", RULE)
+    idx = CodeIndex(tmp_path, [])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, idx, idx, set(), set(),
+        branch_prefixes=["feature", "fix"],
+    )
+    assert findings == []
+
+
+def test_branch_prefix_skip_disabled_with_empty_list(tmp_path: Path):
+    found = anchors.extract("d.md", "Cut `feature/dark-mode` from develop.\n", RULE)
+    idx = CodeIndex(tmp_path, [])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, idx, idx, set(), set(), branch_prefixes=[],
+    )
+    assert [f.token for f in findings] == ["feature/dark-mode"]
+
+
+def test_tracked_path_under_branch_prefix_dir_still_verifies(tmp_path: Path):
+    # a repo genuinely containing a feature/ dir: existing paths pass on the
+    # tree, dead paths under it are skipped only because the prefix matches —
+    # the tracked-file check runs first either way
+    files = {"feature/flags.py"}
+    found = anchors.extract("d.md", "See `feature/flags.py`.\n", RULE)
+    idx = CodeIndex(tmp_path, [])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, idx, idx, files, anchors.dirs_of(files),
+        branch_prefixes=["feature"],
+    )
+    assert findings == []
+
+
+def test_ignore_entry_with_glob_chars_covers_the_family(tmp_path: Path):
+    rule = AnchorRule(min_length=3, ignore=["research/*"])
+    text = "See `research/01-intro.md` and `research/10-close.md`.\n"
+    found = anchors.extract("d.md", text, rule)
+    assert found == []
+
+
+def test_ignore_glob_entry_still_suppresses_its_own_literal_token(tmp_path: Path):
+    # an entry written as an exact token before glob support existed must
+    # keep suppressing the literal token itself (exact stage runs first)
+    rule = AnchorRule(min_length=3, ignore=["com.example.*"])
+    found = anchors.extract("d.md", "Bundle id prefix `com.example.*` is ours.\n", rule)
+    assert found == []
+
+
+def test_ignore_literal_entry_stays_exact(tmp_path: Path):
+    # no glob characters -> exact only; a sibling token is still extracted
+    rule = AnchorRule(min_length=3, ignore=["issue_token"])
+    found = anchors.extract("d.md", "`issue_token` and `open_session` here.\n", rule)
+    assert [a.token for a in found] == ["open_session"]
+
+
+def test_assignment_with_absolute_path_value_falls_back_to_bare_name(tmp_path: Path):
+    # `TOOL_PATH=/usr/bin/tool` quoted in a setup doc: the slash lives in the
+    # assigned value; the token is assignment notation and falls back to the
+    # variable name, which is what the paired code actually contains
+    (tmp_path / "conf.py").write_text('TOOL_PATH = os.environ["TOOL_PATH"]\n', encoding="utf-8")
+    found = anchors.extract("d.md", "Set `TOOL_PATH=/usr/bin/tool` for tests.\n", RULE)
+    assert [(a.token, a.path_like) for a in found] == [("TOOL_PATH=/usr/bin/tool", False)]
+    idx = CodeIndex(tmp_path, ["conf.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert findings == []
+
+
+def test_assignment_to_unknown_variable_still_reds_on_the_bare_name(tmp_path: Path):
+    (tmp_path / "conf.py").write_text("OTHER = 1\n", encoding="utf-8")
+    found = anchors.extract("d.md", "Set `GONE_VAR=/usr/bin/tool` for tests.\n", RULE)
+    idx = CodeIndex(tmp_path, ["conf.py"])
+    findings = anchors.verify(tmp_path, "d.md", found, idx, idx, set(), set())
+    assert [f.token for f in findings] == ["GONE_VAR=/usr/bin/tool"]
+
+
+def test_path_with_equals_after_slash_stays_a_path():
+    # query-ish or annotated path where `=` appears past the first slash
+    got = anchors.extract("d.md", "See `docs/api?v=2` notes.\n", RULE)
+    assert [(a.token, a.path_like) for a in got] == [("docs/api?v=2", True)]
