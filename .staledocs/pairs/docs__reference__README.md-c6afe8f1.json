@@ -1,8 +1,8 @@
 {
   "ack": {
-    "at": "2026-07-15T20:24:54+00:00",
+    "at": "2026-07-15T20:35:58+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "344d46a5289a01e17bfb914a10a82da8c70e1e56",
+      "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
       "src/staledocs/anchors.py": "ebcfdb07e5aeb7e4cce879d3bf67eb8e94189a04",
       "src/staledocs/cli.py": "7cb911f027ae8b69dd1be92049b62d5705c53e65",
       "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681",
@@ -15,9 +15,9 @@
       "src/staledocs/report.py": "de8089a300e166a02db1e6e16c9c447ee66401b8",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "f6072614f0cb7e762ded4c46d91c7997a6c31f89",
+    "commit": "fff3b6abaf70515d9dd9060c7f55f02e25fc8a37",
     "doc_blob": "0860bcb8678e41f34f9bd4c4a69ad28ba9d19596",
-    "note": "README.md two-step section gains the first-ack claims paragraph matching engine.py's new UNACKED evidence; explain --json claims key documented"
+    "note": "version bump only: __init__.py 1.3.1 -> 1.4.0"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
