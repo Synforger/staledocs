@@ -24,7 +24,8 @@ your pairs, then:
 staledocs check      # everything shows UNACKED / uncovered — expected
 staledocs ack --all  # prints per-pair evidence + one token per pair, exits 3
 staledocs ack <doc> --confirm <token> -m '<what you verified>'  # once per pair
-staledocs ack --config -m 'initial baseline'   # record the config baseline too
+# (init already recorded the config baseline; `ack --config` is only needed
+#  after you edit the config — the diff against the scaffold is then shown)
 ```
 
 Commit the config and the ledger (including `.staledocs/config-ack.json`).

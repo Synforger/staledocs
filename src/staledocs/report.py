@@ -68,8 +68,9 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
     if result.config_baseline_missing:
         lines.append(
             yellow(
-                "[config] no accepted baseline yet — record one with "
-                "`staledocs ack --config -m 'initial baseline'`"
+                "[config] no accepted baseline yet — record it with "
+                "`staledocs ack --config -m 'initial baseline'` "
+                "(a first record is initialization, not a weakening approval)"
             )
         )
 
@@ -160,6 +161,13 @@ def render_evidence(evidence: dict, color: bool | None = None) -> str:
             lines.append(dim(f"    doc  L{dl['line']}: {dl['text']}"))
         for cl in hit["changed_lines"]:
             lines.append(dim(f"    diff       : {cl}"))
+    for claim in evidence.get("claims", []):
+        if claim["kind"] == "path":
+            lines.append(red(f"  doc claims file: {claim['file']}"))
+        else:
+            lines.append(red(f"  doc claims `{claim['token']}`"))
+        for dl in claim["doc_lines"]:
+            lines.append(dim(f"    doc  L{dl['line']}: {dl['text']}"))
     if not evidence["hits"] and evidence.get("detail"):
         lines.append(dim(f"  {evidence['detail']}"))
     return "\n".join(lines)
