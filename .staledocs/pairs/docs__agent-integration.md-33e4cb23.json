@@ -1,14 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T07:09:40+00:00",
+    "at": "2026-07-15T18:30:25+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "52f378ed1d5c08e280bb3aa241e279bce54990c1",
-      "src/staledocs/engine.py": "f120ccddf65c4eb1ccc431a82878803730930e87",
-      "src/staledocs/report.py": "cd2f4f666005f6af63c4b946700cde25fa3ba48c"
+      "docs/reference/README.md": "ed2228af1dede4116be74f3a7943bccb8c3f5b41",
+      "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
+      "src/staledocs/engine.py": "980f9056827e26de6df05bc07180a61c6b3741c2",
+      "src/staledocs/report.py": "a7827df333f0a48e70e2f26530110d89f8685123"
     },
-    "commit": "e99a2e5f09d6cbfa9c75fb6ce3fc4c9284ab60da",
+    "commit": "f249859dd35872cfb20637361351becc0b0808a7",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "v0.2 rewrite: cli.py/engine.py/report.py two-step ack + explain + config baseline, docs updated in this worktree"
+    "note": "cli.py ack rework verified: agent-integration.md's bulk-stamp caveat still holds and is now stronger (per-doc tokens); exit-code contract (3 = pending) unchanged"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

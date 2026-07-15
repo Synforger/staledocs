@@ -109,8 +109,8 @@ cd your-repo
 staledocs init --suggest  # scaffold config + print a pairs proposal from your docs' own anchors
 $EDITOR .staledocs.yaml   # review the proposal, paste, adjust (see below)
 staledocs check           # see what's unowned / unacked
-staledocs ack --all       # baseline step 1: evidence + token (exit 3)
-staledocs ack --all --confirm <token> -m 'onboarding baseline'
+staledocs ack --all       # step 1: every pending pair's evidence, one token each (exit 3)
+staledocs ack <doc> --confirm <token> -m '<what you verified>'   # once per pair
 ```
 
 From then on:

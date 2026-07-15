@@ -22,8 +22,8 @@ your pairs, then:
 
 ```sh
 staledocs check      # everything shows UNACKED / uncovered — expected
-staledocs ack --all  # prints per-pair evidence + a token, exits 3
-staledocs ack --all --confirm <token> -m 'onboarding baseline'
+staledocs ack --all  # prints per-pair evidence + one token per pair, exits 3
+staledocs ack <doc> --confirm <token> -m '<what you verified>'  # once per pair
 staledocs ack --config -m 'initial baseline'   # record the config baseline too
 ```
 
@@ -40,8 +40,9 @@ Commit the config and the ledger (including `.staledocs/config-ack.json`).
    pairs` shows what is still unclassified after each edit. Docs can pair
    to upstream docs too (requirements ↔ design chains) — list the upstream
    doc on the `code:` side.
-3. When `pairs` is quiet, reconcile and run the two-step `staledocs ack --all`
-   (evidence + token, then `--confirm`), plus `staledocs ack --config`.
+3. When `pairs` is quiet, reconcile and run the two-step ack: `staledocs ack --all`
+   batches every pair's evidence with its own token, then confirm each pair
+   individually (`staledocs ack <doc> --confirm ...`), plus `staledocs ack --config`.
 4. Flip to `gate: strict` and wire it into CI / pre-commit.
 5. Optional: `staledocs pairs --health` shows which docs quote no anchors
    (those stay red on any code move) and which pairs are wide but thin —

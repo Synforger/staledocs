@@ -98,9 +98,11 @@ A broken pair does not ack in one shot:
    the evidence: a changed file, a quoted anchor, or the doc itself.
 
 Green pairs re-ack directly (nothing to verify). Bulk paths (`--all`,
-`--broken`) use the same two steps with one aggregate token; their note must
-be non-empty but is not content-checked (an onboarding baseline has no
-single evidence to name). The `Staledocs-Ack:` commit trailer is untouched —
+`--broken`) batch only step 1: one run prints every pending pair's evidence
+with its own token, and each pair is then confirmed individually (one token
+acks one pair — a single token that unlocked N pairs would let an unread doc
+ride through on a note about a different one). The note-content check
+applies to every confirm. The `Staledocs-Ack:` commit trailer is untouched —
 that path stays the human shortcut for fix-code-and-doc-together commits.
 
 Trailer resolution walks the history after the acked commit; when that

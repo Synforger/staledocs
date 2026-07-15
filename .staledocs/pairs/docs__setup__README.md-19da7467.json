@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-15T07:09:40+00:00",
+    "at": "2026-07-15T18:30:26+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "52f378ed1d5c08e280bb3aa241e279bce54990c1",
-      "src/staledocs/config.py": "4edb49d98acea2b91ebcdde85fd1038ea9de7fb3"
+      "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
+      "src/staledocs/config.py": "4438ab71b26ed1a26bfa5458a3b56fc4109321e6"
     },
-    "commit": "e99a2e5f09d6cbfa9c75fb6ce3fc4c9284ab60da",
-    "doc_blob": "7d84d97e8e515d8b96a84f14625f743b197189dd",
-    "note": "v0.2 rewrite: cli.py/engine.py/report.py two-step ack + explain + config baseline, docs updated in this worktree"
+    "commit": "f249859dd35872cfb20637361351becc0b0808a7",
+    "doc_blob": "bde2cf8142f7dd0427bd6e917873b502591fe1c7",
+    "note": "setup README onboarding examples updated to the per-doc confirm flow introduced in cli.py this change"
   },
   "doc": "docs/setup/README.md",
   "schema": 1
