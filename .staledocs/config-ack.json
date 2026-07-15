@@ -1,18 +1,21 @@
 {
   "accepted": {
     "anchors": {
-      "ignore": [],
+      "ignore": [
+        "*/[dm][ea][vi][!o]*",
+        "feature/main",
+        "hotfix/develop"
+      ],
       "include_fenced": false,
       "min_length": 3
     },
-    "docs_exclude": [
-      "docs/internals/**"
-    ],
+    "docs_exclude": [],
     "docs_include": [
-      "README.ja.md",
-      "README.md",
+      "*.md",
+      ".github/**/*.md",
       "docs/**/*.md"
     ],
+    "examples_wired": [],
     "gate": "strict",
     "pair_docs": [
       "docs/agent-integration.md",
@@ -24,7 +27,7 @@
       "src/**"
     ]
   },
-  "at": "2026-07-15T07:09:40+00:00",
-  "note": "advanced by pair ack (no weakening)",
+  "at": "2026-07-15T17:37:23+00:00",
+  "note": "docs scope widened to every tracked .md (root *.md via glob, docs/internals, .github) \u2014 README entries subsumed by *.md, not dropped; staledocs now sole owner of path/anchor liveness (docs-check axis A retired)",
   "schema": 1
 }

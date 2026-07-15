@@ -4,9 +4,11 @@ gate: strict
 
 source:
   include: ["src/**"]
+# Every tracked .md is in scope: staledocs owns path/anchor liveness
+# (docs-check.sh keeps only template-convention axes).
 docs:
-  include: ["docs/**/*.md", "README.md", "README.ja.md"]
-  exclude: ["docs/internals/**"]
+  include: ["docs/**/*.md", "*.md", ".github/**/*.md"]
+  exclude: []
 
 pairs:
   - doc: docs/reference/README.md
@@ -20,6 +22,12 @@ pairs:
 standalone:
   - docs/README.md
   - docs/troubleshooting/README.md
+  - "docs/internals/**"
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - ROADMAP.md
+  - THIRD_PARTY_NOTICES.md
+  - ".github/**"
 
 global:
   - README.md
@@ -27,5 +35,10 @@ global:
 
 anchors:
   min_length: 3
-  ignore: []
+  ignore:
+    # git branch patterns quoted in docs/internals/branch-protection.md —
+    # slash syntax without being repo paths
+    - "*/[dm][ea][vi][!o]*"
+    - "feature/main"
+    - "hotfix/develop"
   include_fenced: false
