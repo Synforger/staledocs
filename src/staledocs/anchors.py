@@ -80,12 +80,14 @@ def _looks_like_code(token: str, min_length: int) -> bool:
 def _is_path_like(token: str) -> bool:
     if "://" in token:  # URL, not a repo path
         return False
-    # call notation whose arguments happen to contain a slash — `exp(−d/λ)`,
-    # `ratio(a/b)` — is an identifier, not a path: the reference promises the
-    # bare-identifier fallback for call notation, and the path branch must
-    # not capture it first. A real path never has `(` before its first `/`.
-    if "(" in token and ("/" not in token or token.index("(") < token.index("/")):
-        return False
+    # call/assignment notation whose right side happens to contain a slash —
+    # `exp(−d/λ)`, `VAR=/usr/bin/tool` — is an identifier, not a path: the
+    # reference promises the bare-identifier fallback for these notations,
+    # and the path branch must not capture them first. A real path never has
+    # `(` or `=` before its first `/`.
+    for sep in ("(", "="):
+        if sep in token and ("/" not in token or token.index(sep) < token.index("/")):
+            return False
     return "/" in token.strip("/") or token.startswith("./")
 
 
