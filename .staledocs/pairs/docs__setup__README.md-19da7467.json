@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-15T19:05:51+00:00",
+    "at": "2026-07-15T20:16:51+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
+      "src/staledocs/cli.py": "4b9526a009a6f2b67aec0ff3a6102700f86952a6",
       "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681"
     },
-    "commit": "2f6f8d8e1689f286162a268ba4936d3e6a63d26f",
-    "doc_blob": "5c414bfabe5137eb609940086bf10cbac233cc88",
-    "note": "setup README.md gains the planned-reference triage bucket and the plan-vs-spec rule \u2014 docs-only, no code moved on the pair's side beyond doc itself"
+    "commit": "3fac478d3131b99d67d841dcb5e3f453b57a1d84",
+    "doc_blob": "d207161d2b9ab5d7fbf4a80fc925c8dc6502f7a9",
+    "note": "verified docs/setup/README.md against cli.py/report.py: init now records the baseline itself, first ack --config wording split from weakening approval; setup README.md onboarding step updated to match"
   },
   "doc": "docs/setup/README.md",
   "schema": 1
