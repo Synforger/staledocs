@@ -93,6 +93,6 @@ ack` and read the fresh evidence; the new token supersedes the old one.
 **Cause**: the CI checkout is shallow (`fetch-depth: 1`), so the commits
 carrying the trailer are not in the clone and the baseline cannot advance
 through them. **Fix**: check out with full history
-(`actions/checkout` `fetch-depth: 0`). CLI acks are immune — the ledger
+(the GitHub checkout action with `fetch-depth: 0`). CLI acks are immune — the ledger
 file itself carries the blob hashes — but trailer acks are history-borne
 by design.
