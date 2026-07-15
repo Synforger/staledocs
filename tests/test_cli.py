@@ -325,3 +325,25 @@ def test_single_pending_bulk_confirm_gets_note_checked(paired_repo):
         expect=1,
     )
     assert "note must name" in proc.stderr
+
+
+def test_branch_prefix_growth_is_a_weakening(paired_repo):
+    _run(paired_repo.root, "ack", "--config", "-m", "baseline")
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text()
+    cfg += "anchors:\n  branch_prefixes: [feature, fix, hotfix, release, chore, origin, wip]\n"
+    paired_repo.write(".staledocs.yaml", cfg)
+    proc = _run(paired_repo.root, "check")
+    assert "anchor branch prefix added: 'wip'" in proc.stdout
+
+
+def test_default_branch_prefixes_do_not_fire_against_old_baselines(paired_repo):
+    # a baseline recorded before the key existed carries the defaults
+    # implicitly — upgrading staledocs must not red every existing repo
+    import json as _json
+    _run(paired_repo.root, "ack", "--config", "-m", "baseline")
+    ack_file = paired_repo.root / ".staledocs/config-ack.json"
+    data = _json.loads(ack_file.read_text())
+    data["accepted"]["anchors"].pop("branch_prefixes", None)
+    ack_file.write_text(_json.dumps(data))
+    proc = _run(paired_repo.root, "check")
+    assert "branch prefix added" not in proc.stdout

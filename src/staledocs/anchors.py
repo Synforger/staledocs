@@ -219,6 +219,7 @@ def verify(
     all_dirs: set[str],
     path_roots: list[str] | None = None,
     check_ignored: Callable[[list[str]], set[str]] | None = None,
+    branch_prefixes: list[str] | None = None,
 ) -> list[AnchorFinding]:
     """Findings for anchors that no longer resolve.
 
@@ -273,6 +274,13 @@ def verify(
             if _path_exists(
                 token, all_files, all_dirs, path_roots, anchor.doc_dir
             ) or _ignored(token, anchor.doc_dir):
+                continue
+            # a slash token whose first segment is a branch prefix and which
+            # resolves to no tracked path is a quoted branch name, not a
+            # rotted path (`feature/dark-mode`); a real tracked path with
+            # that prefix already passed above
+            first_seg = token.strip("/").split("/", 1)[0]
+            if branch_prefixes and first_seg in branch_prefixes:
                 continue
             findings.append(
                 AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")

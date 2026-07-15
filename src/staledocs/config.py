@@ -36,12 +36,20 @@ class MirrorRule:
     code_roots: list[str] = field(default_factory=lambda: ["src"])
 
 
+# git branch names share slash syntax with paths (`feature/dark-mode`) but
+# are never repo paths; docs quote them constantly. Tokens whose first
+# segment is one of these prefixes skip path verification when no such
+# tracked path exists. Empty list disables the skip.
+DEFAULT_BRANCH_PREFIXES = ["feature", "fix", "hotfix", "release", "chore", "origin"]
+
+
 @dataclass
 class AnchorRule:
     min_length: int = 3
     ignore: list[str] = field(default_factory=list)
     include_fenced: bool = False
     path_roots: list[str] = field(default_factory=list)
+    branch_prefixes: list[str] = field(default_factory=lambda: list(DEFAULT_BRANCH_PREFIXES))
 
 
 @dataclass
@@ -145,8 +153,14 @@ def load(repo_root: Path) -> Config:
         isinstance(min_length, int) and min_length >= 1,
         "anchors.min_length must be a positive integer",
     )
+    branch_prefixes = (
+        _str_list(anchors_raw.get("branch_prefixes"), "anchors.branch_prefixes")
+        if "branch_prefixes" in anchors_raw
+        else list(DEFAULT_BRANCH_PREFIXES)
+    )
     cfg.anchors = AnchorRule(
         min_length=min_length,
+        branch_prefixes=branch_prefixes,
         ignore=_str_list(anchors_raw.get("ignore"), "anchors.ignore"),
         include_fenced=bool(anchors_raw.get("include_fenced", False)),
         path_roots=_str_list(anchors_raw.get("path_roots"), "anchors.path_roots"),
@@ -210,9 +224,12 @@ global:
 
 anchors:
   min_length: 3
-  ignore: []
+  ignore: []       # exact tokens to skip
   include_fenced: false
   path_roots: []   # extra prefixes for resolving doc-quoted paths (e.g. [src])
+  # quoted branch names (feature/dark-mode) are not paths; first segments
+  # listed here skip path verification when no such tracked path exists.
+  # branch_prefixes: [feature, fix, hotfix, release, chore, origin]
 
 # Executable-docs layer (opt-in): map each fence tag to the runner that
 # executes those blocks in your test suite, or to none (display-only).

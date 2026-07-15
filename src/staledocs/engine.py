@@ -399,6 +399,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                 all_dirs,
                 cfg.anchors.path_roots,
                 check_ignored,
+                cfg.anchors.branch_prefixes,
             )
         )
 
@@ -426,6 +427,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                     all_dirs,
                     cfg.anchors.path_roots,
                     check_ignored,
+                    cfg.anchors.branch_prefixes,
                 )
             )
 
