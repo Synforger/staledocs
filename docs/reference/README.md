@@ -56,7 +56,10 @@ quote paths and identifiers to earn the amber downgrade.
 
 Also red: anchor findings, `uncovered_source`, `unclassified_docs`,
 `orphan_pairs` (pair globs match no code), `dead_pair_docs` (pair doc path
-does not exist), config weakenings (see below). `stale_ledger_docs` (ledger
+does not exist), `out_of_scope_pair_code` (a pair `code:` entry matches only
+tracked files outside the source/docs scope — the pair silently covers less
+than declared; widen the include or drop the entry), config weakenings (see
+below). `stale_ledger_docs` (ledger
 entry for an unmapped doc) is reported but yellow — clean up with
 `staledocs ack --prune`.
 
@@ -150,7 +153,7 @@ confirmation.
   ],
   "coverage": {
     "unclassified_docs": [], "orphan_pairs": [], "uncovered_source": [],
-    "dead_pair_docs": [], "stale_ledger_docs": []
+    "dead_pair_docs": [], "out_of_scope_pair_code": [], "stale_ledger_docs": []
   },
   "config": { "weakenings": [], "baseline_missing": false },
   "examples": {                       // null when the layer is off
