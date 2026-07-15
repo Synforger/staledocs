@@ -31,10 +31,15 @@ Commit the config and the ledger (including `.staledocs/config-ack.json`).
 
 ## Existing repo (brownfield onboarding)
 
-1. `staledocs init`, keep `gate: warn`.
-2. Classify in passes, largest first: add `standalone`/`global` globs for
-   docs with no code side, then pair the rest. `staledocs pairs` shows what
-   is still unclassified after each edit.
+1. `staledocs init --suggest`, keep `gate: warn`. The suggestion resolves
+   every doc's own anchors against the tree and prints a paste-ready
+   `pairs:` proposal (plus standalone candidates for anchor-less docs) —
+   onboarding becomes review-and-paste instead of write-from-scratch.
+2. Review the proposal, then classify what remains: add `standalone`/
+   `global` globs for docs with no code side, pair the rest. `staledocs
+   pairs` shows what is still unclassified after each edit. Docs can pair
+   to upstream docs too (requirements ↔ design chains) — list the upstream
+   doc on the `code:` side.
 3. When `pairs` is quiet, reconcile and run the two-step `staledocs ack --all`
    (evidence + token, then `--confirm`), plus `staledocs ack --config`.
 4. Flip to `gate: strict` and wire it into CI / pre-commit.

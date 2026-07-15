@@ -86,12 +86,19 @@ def resolve(cfg: Config, all_files: list[str]) -> MappingResult:
             result.standalone_docs.append(doc)
             classified.add(doc)
 
-    # 3. explicit pairs (doc is a literal path; a dead path is a finding)
+    # 3. explicit pairs (doc is a literal path; a dead path is a finding).
+    # The "code" side is any tracked side: source files, or other docs —
+    # a doc pairing to an upstream doc is the chained-drift declaration
+    # (requirements <-> design <-> code), same ledger, same grading. The
+    # doc never pairs to itself (degenerate).
+    pairable = sorted(set(result.source_files) | set(result.doc_files))
     for rule in cfg.pairs:
         if rule.doc not in file_set:
             result.dead_pair_docs.append(rule.doc)
             continue
-        code_files = [f for f in result.source_files if globs.match_any(rule.code, f)]
+        code_files = [
+            f for f in pairable if f != rule.doc and globs.match_any(rule.code, f)
+        ]
         result.pairs.append(
             ResolvedPair(
                 doc=rule.doc,

@@ -40,6 +40,10 @@ staledocs は「覚えておく」を不要にする。すべての文書を、�
   強制され、2 段 ack が「読まずに押す」を封じる
 - **設計書 ↔ 実装**: 設計書と `src/**` をペアにすれば仕様と実装の
   無言の乖離が双方向で止まる (= 未実装仕様も `CODE_LAG` で出る)
+- **要件 ↔ 設計 ↔ コードの連鎖**: doc は上流 doc ともペアにできる。
+  設計書の `code:` 側に要件定義書の path を書けば、要件変更が
+  「確認しろ」として下流に流れる — コードが絡まない抽象文書同士の
+  ドリフトも同じ台帳・同じ行粒度格付けで止まる
 - **README 腐敗防止**: global 宣言でフラグ / path / 識別子の引用が毎 commit
   grep 検証される (= 腐った行を行番号で特定)
 - **brownfield 監査**: warn mode で既存 repo に当てるだけで、死んだ参照と
@@ -81,8 +85,8 @@ staledocs は「覚えておく」を不要にする。すべての文書を、�
 pip install staledocs
 
 cd your-repo
-staledocs init            # .staledocs.yaml と台帳 dir を生成
-$EDITOR .staledocs.yaml   # ペアリングを宣言
+staledocs init --suggest  # 生成 + docs のアンカーから pairs 案を印字
+$EDITOR .staledocs.yaml   # 案をレビューして貼る (書き下ろし不要)
 staledocs check           # 未所有 / 未 ack を確認
 staledocs ack --all       # 基準線 1 段目: 証拠 + トークン表示 (exit 3)
 staledocs ack --all --confirm <token> -m 'onboarding baseline'

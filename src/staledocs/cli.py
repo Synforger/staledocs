@@ -46,11 +46,25 @@ def main() -> None:
 
 
 @main.command()
-def init() -> None:
-    """Scaffold .staledocs.yaml and the ledger directory."""
+@click.option(
+    "--suggest",
+    "with_suggest",
+    is_flag=True,
+    help="Propose pairs from each doc's own anchors (proposal only, never writes config).",
+)
+def init(with_suggest: bool) -> None:
+    """Scaffold .staledocs.yaml and the ledger directory.
+
+    With --suggest, anchors in every doc are resolved against the tree and
+    a paste-ready pairs proposal is printed — on a fresh repo after the
+    scaffold, or standalone when a config already exists.
+    """
     repo_root = _repo_root()
     cfg_path = repo_root / CONFIG_NAME
     if cfg_path.exists():
+        if with_suggest:
+            _print_suggestions(repo_root)
+            return
         raise click.ClickException(f"{CONFIG_NAME} already exists")
 
     tracked = gitio.ls_files(repo_root)
@@ -72,6 +86,20 @@ def init() -> None:
     click.echo(
         f"wrote {CONFIG_NAME} and {LEDGER_DIR}/ — edit the pairing, then run `staledocs check`"
     )
+    if with_suggest:
+        click.echo()
+        _print_suggestions(repo_root)
+
+
+def _print_suggestions(repo_root: Path) -> None:
+    from . import suggest as suggest_mod
+
+    cfg = _load_config(repo_root)
+    suggestions = suggest_mod.build(repo_root, cfg, gitio.ls_files(repo_root))
+    if not suggestions:
+        click.echo("no docs found to suggest pairs for")
+        return
+    click.echo(suggest_mod.render(suggestions))
 
 
 @main.command()

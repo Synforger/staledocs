@@ -47,6 +47,11 @@ every referenced identifier still exists (see
 - **Design doc ↔ implementation.** Pair your design doc with `src/**` and
   the spec stops silently diverging from the build — in both directions
   (`CODE_LAG` catches the unbuilt spec, not just the stale doc).
+- **Requirements ↔ design ↔ code chains.** A doc can pair to an upstream
+  doc: list the requirements doc on the design doc's `code:` side and a
+  requirements change flows down as "verify this" — abstract documents
+  stop drifting apart even where no code is involved. Same ledger, same
+  line-granular anchor grading.
 - **README rot prevention.** Declare README `global` and every flag, path,
   and identifier it quotes is grep-verified on every commit — the exact
   line that rotted, not "something changed somewhere".
@@ -100,8 +105,8 @@ Four detection layers; the first three are deterministic, no AI anywhere:
 pip install staledocs
 
 cd your-repo
-staledocs init            # scaffold .staledocs.yaml + ledger dir
-$EDITOR .staledocs.yaml   # declare the pairing (see below)
+staledocs init --suggest  # scaffold config + print a pairs proposal from your docs' own anchors
+$EDITOR .staledocs.yaml   # review the proposal, paste, adjust (see below)
 staledocs check           # see what's unowned / unacked
 staledocs ack --all       # baseline step 1: evidence + token (exit 3)
 staledocs ack --all --confirm <token> -m 'onboarding baseline'

@@ -12,7 +12,8 @@ pairs:
   - doc: docs/reference/README.md
     code: ["src/staledocs/**"]
   - doc: docs/agent-integration.md
-    code: ["src/staledocs/report.py", "src/staledocs/cli.py", "src/staledocs/engine.py"]
+    # chained pair: the reference is this page's upstream truth (exit codes, JSON contract)
+    code: ["src/staledocs/report.py", "src/staledocs/cli.py", "src/staledocs/engine.py", "docs/reference/README.md"]
   - doc: docs/setup/README.md
     code: ["src/staledocs/cli.py", "src/staledocs/config.py"]
 
