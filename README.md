@@ -32,6 +32,7 @@ verdict, no model in the loop:
 | Doc whose code counterpart vanished | the doc for a deleted subsystem lives on, misleading readers | orphan detection |
 | Checks quietly weakened | someone removed a pair or grew the ignore list to silence the tool | config baseline |
 | A stamp given without looking | an agent (or a tired human) acks a break unread | two-step evidence ack |
+| A doc example that quietly stopped working | the README shows output the code no longer produces | executable-docs layer (opt-in) — your test runner executes the doc's own examples; staledocs keeps the wiring declared and flags unclassified example blocks |
 
 What it deliberately does **not** catch: prose whose meaning drifted while
 every referenced identifier still exists (see
@@ -231,14 +232,17 @@ detect deterministically, generate nothing.
 
 ## Limitations (honest ones)
 
-- **Semantic lies are invisible to the deterministic layers.** If code and
-  doc are edited together but the prose now misdescribes the behaviour —
-  while every quoted identifier still exists — no layer here can prove it.
-  That judgement is the ack's job, which is why the ack shows evidence and
-  demands a note instead of pretending certainty. Making doc claims
-  *executable* (doctest-style examples wired into your test runner) is the
-  one deterministic escape hatch, and staledocs is designed to sit next to
-  such tools, not replace them.
+- **Semantic lies in prose are invisible to the deterministic layers.** If
+  code and doc are edited together but the prose now misdescribes the
+  behaviour — while every quoted identifier still exists — no layer here
+  can prove it. That judgement is the ack's job, which is why the ack shows
+  evidence and demands a note instead of pretending certainty. The one
+  deterministic escape hatch is making doc claims *executable*: declare an
+  `examples:` mapping and your own test runner (pytest doctest, Sybil,
+  byexample) executes the doc's example blocks on every CI pass, while
+  staledocs keeps the declaration honest — unclassified example blocks are
+  flagged, and unwiring a runner is a recorded config weakening. staledocs
+  itself still never executes anything.
 - **Grading quality tracks quoting habit.** Line-granularity red needs the
   doc to quote paths and identifiers in backticks. A doc with no anchors
   cannot be graded and stays red on any code move — `pairs --health` lists

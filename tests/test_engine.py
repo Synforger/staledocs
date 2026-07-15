@@ -470,3 +470,78 @@ def test_suggest_builds_pairs_from_anchors(repo):
     assert notes.patterns == []  # standalone 候補
     text = suggest.render(out)
     assert "docs/auth.md" in text and "standalone" in text
+
+
+# --- v1.2: executable-docs layer (opt-in, warn-only, no execution) -----------
+
+
+def _examples_repo(repo, examples_yaml):
+    repo.write("src/x.py", "def f():\n    return 1\n")
+    repo.write(
+        "docs/guide.md",
+        "# Guide\n\n```python\n>>> f()\n1\n```\n\nAlso:\n\n"
+        "```console\n$ run\nok\n```\n\n```yaml\nkey: v\n```\n",
+    )
+    repo.write(
+        ".staledocs.yaml",
+        (
+            "version: 1\n"
+            "gate: warn\n"
+            "source:\n"
+            "  include: [\"src/**\"]\n"
+            "docs:\n"
+            "  include: [\"docs/**/*.md\"]\n"
+            "pairs:\n"
+            "  - doc: docs/guide.md\n"
+            "    code: [\"src/**\"]\n"
+            + examples_yaml
+        ),
+    )
+    repo.commit("examples fixture")
+    return repo
+
+
+def test_examples_layer_off_when_undeclared(repo):
+    _examples_repo(repo, "")
+    result = _check(repo)
+    assert result.examples is None  # opt-in: 完全沈黙
+
+
+def test_examples_inventory_and_undeclared_warn(repo):
+    _examples_repo(
+        repo,
+        "examples:\n  python: \"pytest --doctest-glob\"\n  yaml: none\n",
+    )
+    result = _check(repo)
+    ex = result.examples
+    assert ex.enabled
+    assert ex.wired == {"python": 1}
+    assert ex.per_doc == {"docs/guide.md": 1}
+    # console は未分類 -> warn 対象。yaml は none 宣言済みで沈黙
+    tags = [b.tag for b in ex.undeclared]
+    assert tags == ["console"]
+    # warn-only: red には数えない
+    assert result.red_count() == 1  # UNACKED pair のみ
+
+
+def test_examples_unwiring_is_a_config_weakening(repo):
+    _examples_repo(repo, "examples:\n  python: \"pytest\"\n")
+    from staledocs.config import load
+
+    old = ledger.config_snapshot(load(repo.root))
+    cfg_path = repo.root / ".staledocs.yaml"
+    text = cfg_path.read_text(encoding="utf-8")
+    cfg_path.write_text(text.replace('  python: "pytest"', "  python: none"), encoding="utf-8")
+    new = ledger.config_snapshot(load(repo.root))
+    weak = ledger.config_weakenings(old, new)
+    assert any("example runner unwired" in w for w in weak)
+
+
+def test_examples_scan_ignores_closing_fences_and_untagged(repo):
+    from staledocs import examples
+
+    blocks = examples.scan_doc(
+        "d.md",
+        "```python\ncode\n```\n\n```\nplain\n```\n\n~~~sh\nx\n~~~\n",
+    )
+    assert [(b.tag, b.line) for b in blocks] == [("python", 1), ("sh", 9)]

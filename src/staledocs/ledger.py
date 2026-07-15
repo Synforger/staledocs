@@ -145,6 +145,9 @@ def config_snapshot(cfg: object) -> dict:
             "ignore": sorted(cfg.anchors.ignore),
             "include_fenced": cfg.anchors.include_fenced,
         },
+        "examples_wired": sorted(
+            tag for tag, runner in getattr(cfg, "examples", {}).items() if runner
+        ),
     }
 
 
@@ -212,4 +215,7 @@ def config_weakenings(old: dict, new: dict) -> list[str]:
             out.append(f"anchor ignore added: {tok!r}")
     if old_a.get("include_fenced") and not new_a.get("include_fenced"):
         out.append("fenced-block anchors disabled: include_fenced true -> false")
+    for tag in old.get("examples_wired", []):
+        if tag not in new.get("examples_wired", []):
+            out.append(f"example runner unwired: {tag!r}")
     return out
