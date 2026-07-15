@@ -203,7 +203,10 @@ staledocs check --gate strict || exit 1
 ```
 
 Start with `gate: warn` while onboarding a brownfield repo, flip to
-`strict` once `check` is quiet. Exit codes: `0` ok, `1` gate failure,
+`strict` once `check` is quiet — the first run prints dozens of findings
+on a real repo, and [docs/setup](docs/setup/README.md) has the triage
+table (real rot / quoted non-identifiers / scope gaps / undeclared pairs)
+plus the three flip criteria. Exit codes: `0` ok, `1` gate failure,
 `2` usage error, `3` ack pending confirmation.
 
 ## AI-agent integration

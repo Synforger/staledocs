@@ -52,6 +52,42 @@ The warn→strict split is deliberate: the completeness gate is only useful
 once the pairing is complete, and blocking commits during onboarding just
 gets the tool uninstalled.
 
+## Triaging the first run
+
+A brownfield first run on a real repo prints dozens of findings. That is
+the tool being honest, not broken — but each finding needs a verdict, and
+warn mode left to rot means nobody reads the report again. Sort every
+finding into one of four buckets; each has exactly one correct move:
+
+| what the finding is | how to tell | the move |
+|---|---|---|
+| real rot | the doc names a file/flag/identifier that genuinely no longer exists | fix the doc (or the code) — this is the tool's payload, don't ignore it away |
+| not-an-identifier quote | git branch names, config-example snippets, tokens for another machine (`~/...`, other-repo paths) | `anchors.ignore` — one entry per token or a glob for a family, with a comment saying what it is |
+| scope gap | coverage/mapping findings: unclassified doc, uncovered source, pair code outside scope | widen `include`, or declare `standalone`/`global` — never shrink the source scope to silence it |
+| undeclared pair | a doc that clearly owns code but was never paired | add the pair, then two-step ack it |
+
+Rules of thumb while sorting:
+
+- **Fix rot before adding ignores.** An ignore written to silence real rot
+  is exactly the weakening the config baseline will flag later.
+- **Comment every ignore entry.** Six months on, an uncommented token is
+  indistinguishable from a silenced finding.
+- **Re-run `staledocs check` after each bucket**, not at the end — the
+  count dropping is how you notice a mis-sorted entry immediately.
+
+## When to flip warn → strict
+
+Flip when all three hold, and wire the gate into CI in the same change:
+
+1. `staledocs check` reports 0 red on two consecutive working days (one
+   clean run proves the moment, two prove the pairing survives real work).
+2. `staledocs pairs` shows no unclassified docs and no uncovered source.
+3. Every `anchors.ignore` entry carries a comment you would defend in
+   review.
+
+Strict from then on means red blocks CI — which is the point: from this
+moment doc drift is a build failure, not a report.
+
 ## Recommended git hygiene
 
 - Commit `.staledocs.yaml` and `.staledocs/pairs/` — the ledger is shared

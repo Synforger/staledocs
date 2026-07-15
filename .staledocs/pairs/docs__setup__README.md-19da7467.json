@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-15T18:47:23+00:00",
+    "at": "2026-07-15T18:56:21+00:00",
     "code_blobs": {
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
       "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681"
     },
-    "commit": "f62df76f065a2c0d0bab7599b0133434004d047c",
-    "doc_blob": "bde2cf8142f7dd0427bd6e917873b502591fe1c7",
-    "note": "verified docs/setup/README.md against anchors.py glob-ignore change: docs rows updated where README.md documents the ignore semantics, agent surface unchanged (keys untouched)"
+    "commit": "25291d9cc0763e4d33f4790ead4c236df0685f38",
+    "doc_blob": "def4f087068a1ca48a8d2a5be50c639c9541a0cc",
+    "note": "docs/setup/README.md gains the first-run triage table and warn->strict flip criteria; cli.py/config.py behavior unchanged by this docs-only change"
   },
   "doc": "docs/setup/README.md",
   "schema": 1
