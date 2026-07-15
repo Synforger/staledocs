@@ -79,6 +79,15 @@ def commit_exists(repo_root: Path, sha: str) -> bool:
     return proc.returncode == 0
 
 
+def is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: str) -> bool:
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "merge-base", "--is-ancestor", ancestor_sha, descendant_sha],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0
+
+
 @dataclass
 class Commit:
     sha: str

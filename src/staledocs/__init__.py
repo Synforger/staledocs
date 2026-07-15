@@ -7,4 +7,4 @@ the judgement call (fix the doc, fix the code, or ack as-is) to a human or an
 AI agent consuming the JSON report.
 """
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
