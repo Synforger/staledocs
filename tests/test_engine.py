@@ -352,3 +352,121 @@ def test_trailer_absorbs_even_when_ack_commit_is_lost(paired_repo):
     report = _pair_state(paired_repo)
     assert report.state == engine.GREEN
     assert "trailer" in report.detail
+
+
+# --- v1.1: doc<->doc chained pairs + init --suggest --------------------------
+
+
+def _chained_repo(repo):
+    """要件定義書 (上流) ← 設計書 (下流) ← コード、の 3 段連鎖 fixture。"""
+    repo.write("src/auth/token.py", "def issue_token():\n    return 'tok'\n")
+    repo.write("docs/requirements.md", "# Req\n\nToken auth: issue via `issue_token`.\n")
+    repo.write(
+        "docs/design.md",
+        "# Design\n\nImplements `issue_token` per `docs/requirements.md`.\n",
+    )
+    repo.write(
+        ".staledocs.yaml",
+        (
+            "version: 1\n"
+            "gate: warn\n"
+            "source:\n"
+            "  include: [\"src/**\"]\n"
+            "docs:\n"
+            "  include: [\"docs/**/*.md\"]\n"
+            "pairs:\n"
+            "  - doc: docs/design.md\n"
+            "    code: [\"src/auth/**\", \"docs/requirements.md\"]\n"
+            "  - doc: docs/requirements.md\n"
+            "    code: [\"src/auth/**\"]\n"
+        ),
+    )
+    repo.commit("chained fixture")
+    return repo
+
+
+def test_doc_to_doc_pair_resolves(repo):
+    _chained_repo(repo)
+    from staledocs.config import load
+    from staledocs.mapping import resolve
+
+    cfg = load(repo.root)
+    mapping = resolve(cfg, gitio.ls_files(repo.root))
+    design = next(p for p in mapping.pairs if p.doc == "docs/design.md")
+    assert "docs/requirements.md" in design.code_files
+    assert "src/auth/token.py" in design.code_files
+
+
+def test_upstream_doc_move_breaks_downstream_with_line_evidence(repo):
+    _chained_repo(repo)
+    _ack_all(repo)
+    # 上流 (要件) の issue_token に触れる行が動く → 下流 (設計書) が red、行証拠付き
+    repo.write(
+        "docs/requirements.md", "# Req\n\nToken auth: `issue_token` gains TTL.\n"
+    )
+    repo.commit("requirement changed", "docs/requirements.md")
+    report = _pair_state(repo, doc="docs/design.md")
+    assert report.state == engine.DOC_STALE
+    hit = next(h for h in report.hit_anchors if h.file == "docs/requirements.md")
+    assert hit.kind in ("path", "ident")
+
+
+def test_doc_never_pairs_to_itself(repo):
+    repo.write("docs/design.md", "# D\n")
+    repo.write("src/x.py", "pass\n")
+    repo.write(
+        ".staledocs.yaml",
+        (
+            "version: 1\n"
+            "gate: warn\n"
+            "source:\n"
+            "  include: [\"src/**\"]\n"
+            "docs:\n"
+            "  include: [\"docs/**/*.md\"]\n"
+            "pairs:\n"
+            "  - doc: docs/design.md\n"
+            "    code: [\"docs/**\", \"src/**\"]\n"
+        ),
+    )
+    repo.commit("self glob")
+    from staledocs.config import load
+    from staledocs.mapping import resolve
+
+    cfg = load(repo.root)
+    mapping = resolve(cfg, gitio.ls_files(repo.root))
+    design = next(p for p in mapping.pairs if p.doc == "docs/design.md")
+    assert "docs/design.md" not in design.code_files
+
+
+def test_suggest_builds_pairs_from_anchors(repo):
+    repo.write("src/auth/token.py", "def issue_token():\n    return 1\n")
+    repo.write("src/auth/session.py", "def open_session():\n    return 1\n")
+    repo.write("src/billing/invoice.py", "def bill():\n    return 1\n")
+    repo.write(
+        "docs/auth.md", "# Auth\n\n`issue_token` and `open_session` live in `src/auth/`.\n"
+    )
+    repo.write("docs/notes.md", "# Notes\n\nProse only, no anchors.\n")
+    repo.write(
+        ".staledocs.yaml",
+        (
+            "version: 1\n"
+            "gate: warn\n"
+            "source:\n"
+            "  include: [\"src/**\"]\n"
+            "docs:\n"
+            "  include: [\"docs/**/*.md\"]\n"
+        ),
+    )
+    repo.commit("suggest fixture")
+    from staledocs import suggest
+    from staledocs.config import load
+
+    cfg = load(repo.root)
+    out = suggest.build(repo.root, cfg, gitio.ls_files(repo.root))
+    auth = next(s for s in out if s.doc == "docs/auth.md")
+    assert "src/auth/**" in auth.patterns  # 全 file 言及 -> dir glob へ集約
+    assert "src/billing/invoice.py" not in " ".join(auth.patterns)
+    notes = next(s for s in out if s.doc == "docs/notes.md")
+    assert notes.patterns == []  # standalone 候補
+    text = suggest.render(out)
+    assert "docs/auth.md" in text and "standalone" in text

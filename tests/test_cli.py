@@ -226,3 +226,12 @@ def test_ack_config_records_and_clears_weakening(paired_repo):
     proc = _run(paired_repo.root, "ack", "--config", "-m", "issue_token is a doc-only term now")
     assert "accepted weakening" in proc.stdout
     _run(paired_repo.root, "check", "--gate", "strict")
+
+
+def test_init_suggest_prints_proposal_on_existing_config(paired_repo):
+    proc = _run(paired_repo.root, "init", "--suggest")
+    assert "pairs:" in proc.stdout
+    assert "docs/auth.md" in proc.stdout
+    # 提案のみ: config は書き換えない
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text(encoding="utf-8")
+    assert "suggestions" not in cfg
