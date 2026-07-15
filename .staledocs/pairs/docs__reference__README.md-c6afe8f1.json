@@ -1,11 +1,11 @@
 {
   "ack": {
-    "at": "2026-07-15T18:43:46+00:00",
+    "at": "2026-07-15T18:47:23+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "3ed1f8c6e36965a2b82bd7d449c83da7902f007e",
-      "src/staledocs/anchors.py": "56037bb101971e8ea2a07d25891d9e106bbaf4c5",
+      "src/staledocs/anchors.py": "79f553b9df85e403f63f3cb6b0136c238f897326",
       "src/staledocs/cli.py": "ce417bcdf7380a94bf1379e30ffe5cf7e21c7f2f",
-      "src/staledocs/config.py": "010838e78b9d45339bb6c279ae63b8f4bc9f245e",
+      "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681",
       "src/staledocs/engine.py": "da5471052a0ab00a574046a523b1227a179ae77c",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
       "src/staledocs/gitio.py": "fe0a1d0dd7f16281c22f56a7b2cdf6c01a4cf8e3",
@@ -15,9 +15,9 @@
       "src/staledocs/report.py": "24abb8e59a9e58d729306d776b1bee2135a66fdf",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "08905d37e318208a9e62ec8d92670fd74a982248",
-    "doc_blob": "4e6223d785d59ea5254413de84c77d464eda4d83",
-    "note": "verified: reference README.md documents the new anchors.branch_prefixes row and the branch_prefixes-grown weakening direction added in config.py/ledger.py this change"
+    "commit": "f62df76f065a2c0d0bab7599b0133434004d047c",
+    "doc_blob": "cade48212126c4853618a30522c5a9ce61ca53dd",
+    "note": "verified docs/reference/README.md against anchors.py glob-ignore change: docs rows updated where README.md documents the ignore semantics, agent surface unchanged (keys untouched)"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

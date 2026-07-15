@@ -10,6 +10,7 @@ point at the exact doc line that rotted.
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -93,7 +94,17 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
     anchors: list[Anchor] = []
     in_fence = False
     fence_marker = ""
-    ignore = set(rule.ignore)
+    # two-stage ignore: exact match first (an entry always suppresses its own
+    # literal token, glob metacharacters included), then fnmatch for entries
+    # that carry glob characters — `research/*` covers ten sections in one
+    # line instead of ten
+    ignore_exact = set(rule.ignore)
+    ignore_globs = [p for p in rule.ignore if any(ch in p for ch in "*?[")]
+
+    def _token_ignored(token: str) -> bool:
+        if token in ignore_exact:
+            return True
+        return any(fnmatch.fnmatchcase(token, p) for p in ignore_globs)
     for lineno, line in enumerate(text.splitlines(), start=1):
         fence = _FENCE_RE.match(line)
         if fence:
@@ -108,7 +119,7 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
             continue
         for m in _SPAN_RE.finditer(line):
             token = (m.group(1) or m.group(2) or "").strip()
-            if not token or token in ignore:
+            if not token or _token_ignored(token):
                 continue
             if not _looks_like_code(token, rule.min_length):
                 continue

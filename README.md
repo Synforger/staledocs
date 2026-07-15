@@ -150,6 +150,11 @@ standalone:                # docs that intentionally have no code side
   - "docs/ops/**"
 global:                    # whole-repo docs: anchors only, no pair ledger
   - README.md
+
+anchors:                   # the liveness layer's dials (all optional)
+  min_length: 3
+  ignore: []               # tokens to skip — exact, or globs when the entry has * ? [
+  include_fenced: false
 ```
 
 Explicit pairs win over the mirror convention. N:M is natural — one file may

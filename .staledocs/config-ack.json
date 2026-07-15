@@ -12,7 +12,8 @@
       "ignore": [
         "*/[dm][ea][vi][!o]*",
         "feature/main",
-        "hotfix/develop"
+        "hotfix/develop",
+        "research/*"
       ],
       "include_fenced": false,
       "min_length": 3
@@ -35,7 +36,7 @@
       "src/**"
     ]
   },
-  "at": "2026-07-15T18:43:47+00:00",
-  "note": "advanced by pair ack (no weakening)",
+  "at": "2026-07-15T18:48:16+00:00",
+  "note": "anchors.ignore gains the literal 'research/*' \u2014 it is the config example quoted in docs/reference/README.md's ignore row, not a repo path",
   "schema": 1
 }
