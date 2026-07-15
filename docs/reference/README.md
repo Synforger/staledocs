@@ -109,7 +109,7 @@ confirmation.
 
 ```jsonc
 {
-  "staledocs": "0.2.0",
+  "staledocs": "1.0.0",
   "schema": 1,
   "gate": "warn",
   "summary": { "red": 2, "amber": 1, "green": 7 },
