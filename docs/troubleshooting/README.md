@@ -85,3 +85,14 @@ is deterministic substring matching, not semantic judgement.
 either side of the pair moved between step 1 and step 2 — the evidence you
 read is no longer the state you are stamping. **Fix**: rerun `staledocs
 ack` and read the fresh evidence; the new token supersedes the old one.
+
+## CI reports BROKEN but local `check` is green
+
+**Symptom**: the coherence gate passes locally yet fails in CI with
+`BROKEN` on a pair you acked via a `Staledocs-Ack:` commit trailer.
+**Cause**: the CI checkout is shallow (`fetch-depth: 1`), so the commits
+carrying the trailer are not in the clone and the baseline cannot advance
+through them. **Fix**: check out with full history
+(`actions/checkout` `fetch-depth: 0`). CLI acks are immune — the ledger
+file itself carries the blob hashes — but trailer acks are history-borne
+by design.
