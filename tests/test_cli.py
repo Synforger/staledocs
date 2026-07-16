@@ -580,3 +580,15 @@ def test_prose_skip_surfaces_in_json_and_summary(paired_repo):
     ]
     human = _run(paired_repo.root, "check")
     assert "1 prose-like slash token(s) skipped" in human.stdout
+
+
+def test_glob_pair_no_match_is_red_in_check(paired_repo):
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text().replace(
+        'pairs:', 'pairs:\n  - doc: guides/**/*.md\n    code: ["src/**"]', 1
+    )
+    paired_repo.write(".staledocs.yaml", cfg)
+    paired_repo.commit("dangling glob pair")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["coverage"]["glob_pair_no_match"] == ["guides/**/*.md"]
+    assert payload["summary"]["red_breakdown"]["mapping"] == 1

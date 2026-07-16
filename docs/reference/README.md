@@ -11,6 +11,7 @@
 | `docs.include` | globs | `docs/**/*.md`, `README.md` | files treated as docs |
 | `docs.exclude` | globs | `[]` | |
 | `pairs[].doc` | path | | literal doc path (one entry per doc) |
+| `pairs[].doc` | path or glob | | the owning doc. A glob expands to one independent pair per matched doc (shared `code` globs, per-doc ledger); exact pairs always win regardless of position, globs pair what remains and never take docs declared `global`/`standalone`; a glob matching nothing is a red mapping finding |
 | `pairs[].code` | globs | | what this doc tracks: source files **or other docs** — pairing a doc to an upstream doc declares a chained-drift link (requirements ↔ design ↔ code), same ledger, same anchor grading; a doc never pairs to itself |
 | `mirror.enabled` | bool | `false` | convention pairing `docs/<x>.md` ↔ `<code_root>/<x>/**` and `<code_root>/<x>.*` |
 | `mirror.docs_root` | path | `docs` | |

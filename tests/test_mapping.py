@@ -151,3 +151,45 @@ def test_doc_matching_source_glob_is_not_uncovered_source():
     assert "README.md" not in r.source_files
     # real code is still subject to the coverage floor
     assert all(f.endswith(".py") for f in r.source_files)
+
+
+def test_glob_pair_expands_to_independent_pairs():
+    cfg = _cfg(pairs=[PairRule(doc="docs/**/*.md", code=["src/auth/**"])])
+    r = resolve(cfg, FILES)
+    docs = [p.doc for p in r.pairs]
+    assert docs == ["docs/auth.md", "docs/ops/runbook.md", "docs/orphan.md"]
+    # each expanded pair carries the shared code globs
+    assert all(p.code_patterns == ["src/auth/**"] for p in r.pairs)
+    assert r.unclassified_docs == ["README.md"]
+
+
+def test_exact_pair_wins_over_glob_regardless_of_order():
+    cfg = _cfg(
+        pairs=[
+            PairRule(doc="docs/**/*.md", code=["src/**"]),
+            PairRule(doc="docs/auth.md", code=["src/auth/**"]),
+        ]
+    )
+    r = resolve(cfg, FILES)
+    auth = next(p for p in r.pairs if p.doc == "docs/auth.md")
+    assert auth.code_patterns == ["src/auth/**"]
+    assert sum(1 for p in r.pairs if p.doc == "docs/auth.md") == 1
+
+
+def test_glob_pair_skips_global_and_standalone_docs():
+    cfg = _cfg(
+        global_docs=["README.md"],
+        standalone=["docs/ops/**"],
+        pairs=[PairRule(doc="**/*.md", code=["src/**"])],
+    )
+    r = resolve(cfg, FILES)
+    docs = [p.doc for p in r.pairs]
+    assert "README.md" not in docs
+    assert "docs/ops/runbook.md" not in docs
+
+
+def test_glob_pair_matching_nothing_is_a_finding():
+    cfg = _cfg(pairs=[PairRule(doc="guides/**/*.md", code=["src/**"])])
+    r = resolve(cfg, FILES)
+    assert r.glob_pair_no_match == ["guides/**/*.md"]
+    assert r.dead_pair_docs == []

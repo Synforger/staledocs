@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import globs
-from .config import Config
+from .config import Config, PairRule
 
 
 @dataclass
@@ -36,6 +36,7 @@ class MappingResult:
     orphan_pairs: list[str] = field(default_factory=list)
     uncovered_source: list[str] = field(default_factory=list)
     dead_pair_docs: list[str] = field(default_factory=list)
+    glob_pair_no_match: list[str] = field(default_factory=list)
     out_of_scope_pair_code: list[str] = field(default_factory=list)
     source_files: list[str] = field(default_factory=list)
     doc_files: list[str] = field(default_factory=list)
@@ -92,41 +93,68 @@ def resolve(cfg: Config, all_files: list[str]) -> MappingResult:
             result.standalone_docs.append(doc)
             classified.add(doc)
 
-    # 3. explicit pairs (doc is a literal path; a dead path is a finding).
-    # The "code" side is any tracked side: source files, or other docs —
-    # a doc pairing to an upstream doc is the chained-drift declaration
+    # 3. explicit pairs. The doc side is a literal path (a dead path is a
+    # finding) or a glob — a glob expands to one independent pair per
+    # matched doc. Exact declarations always win regardless of position;
+    # globs pair whatever remains, in declaration order (no ordering
+    # footgun: a specific pair is never shadowed by a family glob). The
+    # "code" side is any tracked side: source files, or other docs — a doc
+    # pairing to an upstream doc is the chained-drift declaration
     # (requirements <-> design <-> code), same ledger, same grading. The
     # doc never pairs to itself (degenerate).
     pairable = sorted(set(result.source_files) | set(result.doc_files))
-    for rule in cfg.pairs:
-        if rule.doc not in file_set:
-            result.dead_pair_docs.append(rule.doc)
-            continue
-        code_files = [
-            f for f in pairable if f != rule.doc and globs.match_any(rule.code, f)
-        ]
-        # A pattern that matches tracked files but contributes nothing pairable
-        # means the pair silently covers less than its author declared — the
-        # exact quiet-weakening class this tool exists to surface. Never drop
-        # it without a finding.
-        pairable_set = set(pairable)
+    pairable_set = set(pairable)
+
+    def _check_out_of_scope(rule: PairRule, self_doc: str | None) -> None:
+        # A pattern that matches tracked files but contributes nothing
+        # pairable means the pair silently covers less than its author
+        # declared — the exact quiet-weakening class this tool exists to
+        # surface. Never drop it without a finding.
         for pattern in rule.code:
             tracked_hits = [
-                f for f in all_files if f != rule.doc and globs.match_any([pattern], f)
+                f for f in all_files if f != self_doc and globs.match_any([pattern], f)
             ]
             if tracked_hits and not any(f in pairable_set for f in tracked_hits):
                 result.out_of_scope_pair_code.append(f"{rule.doc}: {pattern}")
+
+    def _add_pair(doc: str, rule: PairRule) -> None:
+        code_files = [f for f in pairable if f != doc and globs.match_any(rule.code, f)]
         result.pairs.append(
             ResolvedPair(
-                doc=rule.doc,
+                doc=doc,
                 code_patterns=list(rule.code),
                 code_files=sorted(code_files),
                 origin="explicit",
             )
         )
-        classified.add(rule.doc)
+        classified.add(doc)
         if not code_files:
-            result.orphan_pairs.append(rule.doc)
+            result.orphan_pairs.append(doc)
+
+    literal_rules = [r for r in cfg.pairs if not any(ch in r.doc for ch in "*?[")]
+    glob_rules = [r for r in cfg.pairs if any(ch in r.doc for ch in "*?[")]
+
+    for rule in literal_rules:
+        if rule.doc not in file_set:
+            result.dead_pair_docs.append(rule.doc)
+            continue
+        _check_out_of_scope(rule, rule.doc)
+        _add_pair(rule.doc, rule)
+
+    for rule in glob_rules:
+        matches = [
+            d
+            for d in result.doc_files
+            if d not in classified and globs.match_any([rule.doc], d)
+        ]
+        if not matches:
+            # a glob quietly matching nothing is the silent-weakening
+            # class again — surface it, never drop it
+            result.glob_pair_no_match.append(rule.doc)
+            continue
+        _check_out_of_scope(rule, None)
+        for doc in matches:
+            _add_pair(doc, rule)
 
     # 4. mirror convention for whatever docs remain
     if cfg.mirror.enabled:
@@ -161,5 +189,6 @@ def resolve(cfg: Config, all_files: list[str]) -> MappingResult:
     result.global_docs.sort()
     result.orphan_pairs.sort()
     result.dead_pair_docs.sort()
+    result.glob_pair_no_match.sort()
     result.out_of_scope_pair_code.sort()
     return result
