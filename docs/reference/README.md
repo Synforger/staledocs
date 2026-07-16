@@ -202,7 +202,12 @@ confirmation.
   "anchor_status": {                    // the arming picture, never red
     "baseline_missing": [ ],            // docs never anchor-acked: nothing gates yet
     "per_doc": {
-      "docs/auth.md": { "armed": 4, "unarmed": 2, "unarmed_tokens": ["min/max", "@scope/dep"] }
+      "docs/auth.md": {
+        "armed": 4, "unarmed": 2, "unarmed_tokens": ["min/max", "src/old.py"],
+        // path-shaped unresolved tokens: the one-time reconciliation
+        // shortlist (`staledocs unarmed` prints exactly these)
+        "review_candidates": [ { "line": 12, "token": "src/old.py" } ]
+      }
     }
   },
   "coverage": {

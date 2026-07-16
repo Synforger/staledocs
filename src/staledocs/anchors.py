@@ -290,6 +290,10 @@ class AnchorStatus:
     unarmed: int = 0          # tokens in the doc that are not claims (yet)
     baseline_missing: bool = False
     unarmed_tokens: list[str] = field(default_factory=list)
+    # unarmed tokens that still look like real path claims — the one-time
+    # reconciliation shortlist: a reference that should exist but never
+    # resolved is pre-existing drift, and it will never red on its own
+    review: list[AnchorFinding] = field(default_factory=list)
 
 
 @dataclass
@@ -326,6 +330,29 @@ class ResolveCtx:
             return False
         cands = _path_candidates(token, self.path_roots, doc_dir)
         return bool(cands) and bool(self.check_ignored(cands))
+
+
+_EXT_RE = re.compile(r"\.[A-Za-z0-9]{1,8}$")
+
+
+def _path_shaped(token: str, ctx: ResolveCtx) -> bool:
+    """An unresolved token that still looks like a real path claim.
+
+    Extension-bearing, or rooted in a tracked top-level dir (directly or
+    under a path root). These are the reconciliation shortlist — prose,
+    flags, and symbols never qualify, so the one-time unarmed review reads
+    dozens of lines instead of thousands."""
+    last = token.rstrip("/").rsplit("/", 1)[-1]
+    if _EXT_RE.search(last):
+        return True
+    if "/" not in token:
+        return False
+    head = token.strip("/").split("/", 1)[0]
+    if head in ctx.all_dirs:
+        return True
+    return any(
+        f"{r.strip('/')}/{head}" in ctx.all_dirs for r in (ctx.path_roots or [])
+    )
 
 
 def _suffix_exists(token: str, ctx: ResolveCtx) -> bool:
@@ -463,6 +490,12 @@ def verify(
             if baseline is None or key not in baseline:
                 status.unarmed += 1
                 status.unarmed_tokens.append(key)
+                if not ok and _path_shaped(key, ctx):
+                    status.review.append(
+                        AnchorFinding(
+                            doc=doc, line=anchor.line, token=key, scope="unarmed"
+                        )
+                    )
                 continue
             status.armed += 1
             if ok:

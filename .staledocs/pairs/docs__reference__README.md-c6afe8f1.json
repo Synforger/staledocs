@@ -47,11 +47,11 @@
       "uncovered_source",
       "viewMode='x'"
     ],
-    "at": "2026-07-16T12:44:07+00:00",
+    "at": "2026-07-16T12:47:25+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "fdc842e01853032b615e5fdd753768830e0f902e",
-      "src/staledocs/anchors.py": "fd363d7f69592257c32de3103010ef362cfaa24c",
-      "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
+      "src/staledocs/anchors.py": "f9e691f9b5d8903f49b3ee6d33e76c2fc6b90093",
+      "src/staledocs/cli.py": "7c45b36ff5c148072333e785b2db1e57f0185d88",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
       "src/staledocs/engine.py": "42251fc2e8f82c772eb49166f2bebb1cbf15c957",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
@@ -59,12 +59,12 @@
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "624a59c266807f2c7fdecb6447af8c79dfd7d621",
       "src/staledocs/mapping.py": "1cbe8595bb1d7bd4567f44da6294cba9fec81a5f",
-      "src/staledocs/report.py": "2872daa981620ff290ca56f43ed8f58b0a0c28f6",
+      "src/staledocs/report.py": "7992cb446f4847b431975d10ea2dafbb31371c80",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "64a21e94b0ccd7affe47721c3f88a10190babdba",
-    "doc_blob": "5c5ab2292a88b1151570755c51e63cfb7de3b1c6",
-    "note": "docs/reference/README.md documents schema 2, trailer-ack anchor-baseline boundary, tracked+untracked resolution"
+    "commit": "ac8580a12b5ff85738246ede21367b97368fa2c8",
+    "doc_blob": "b801b1a900e2403d0e587232549efc748be7039a",
+    "note": "docs/reference/README.md JSON contract now shows review_candidates from anchors.py AnchorStatus"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
