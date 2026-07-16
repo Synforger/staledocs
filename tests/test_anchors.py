@@ -543,3 +543,18 @@ def test_pair_miss_with_no_survivor_has_no_hint(tmp_path: Path):
         tmp_path, "d.md", found, pair_index, repo_index, set(), set()
     )
     assert findings[0].hint == ""
+
+
+def test_unarmed_path_shaped_tokens_are_review_candidates(tmp_path: Path):
+    # `src/deleted.py` (tracked root + extension) is a reconciliation
+    # candidate; `min/max` and `CODE_SIGNING=NO` are not
+    text = "See `src/deleted.py`, clamp `min/max`, sign with `CODE_SIGNING=NO`.\n"
+    found = anchors.extract("d.md", text, RULE)
+    files = {"src/real.py"}
+    ctx = anchors.ResolveCtx(
+        repo_root=tmp_path, pair_index=None, repo_index=CodeIndex(tmp_path, []),
+        all_files=files, all_dirs=anchors.dirs_of(files),
+    )
+    _findings, status = anchors.verify("d.md", found, set(), ctx)
+    assert [f.token for f in status.review] == ["src/deleted.py"]
+    assert status.unarmed == 3

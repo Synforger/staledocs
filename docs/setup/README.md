@@ -42,10 +42,12 @@ gate yet. To finish the migration:
 
 1. `staledocs ack --all` — pairs re-ack with evidence as usual; global and
    standalone docs record their anchor baselines directly (one step).
-2. Review each doc's `unarmed_tokens` in `check --json` once. A reference
-   that *should* exist but never resolved is pre-existing drift — fix the
-   doc (or the code) now; it predates the baseline and will never red on
-   its own.
+2. Run `staledocs unarmed` once. It shortlists the unarmed tokens that
+   still look like real path claims (extension-bearing or tracked-root) —
+   a reference that *should* exist but never resolved is pre-existing
+   drift: fix the doc (or the code) now; it predates the baseline and
+   will never red on its own. Prose, flags, and symbols stay off the
+   list, so the review reads dozens of lines, not thousands.
 3. From here on an anchor red means an armed claim stopped resolving —
    provable drift, no reconciliation debt behind it.
 
