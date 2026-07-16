@@ -245,7 +245,7 @@ def ack(
             click.echo("no broken pairs — nothing to ack")
             return
     elif docs:
-        targets = [d.strip().lstrip("./") for d in docs]
+        targets = [d.strip().removeprefix("./").strip("/") for d in docs]
         for doc in targets:
             if doc not in by_doc:
                 raise click.ClickException(
@@ -331,7 +331,7 @@ def explain(docs: tuple[str, ...], as_json: bool) -> None:
     cfg = _load_config(repo_root)
     resolved = _resolve(repo_root, cfg)
     mention_ctx = engine.make_mention_ctx(repo_root, cfg)
-    wanted = {d.strip().lstrip("./") for d in docs} if docs else None
+    wanted = {d.strip().removeprefix("./").strip("/") for d in docs} if docs else None
 
     blocks: list[dict] = []
     for pair in resolved.pairs:

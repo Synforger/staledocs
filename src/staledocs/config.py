@@ -128,7 +128,10 @@ def load(repo_root: Path) -> Config:
             isinstance(doc, str) and doc.strip() != "",
             f"{where}.doc must be a non-empty string",
         )
-        doc = doc.strip().lstrip("./")
+        # removeprefix, not lstrip: lstrip("./") eats the leading dot of a
+        # hidden directory (`.ci/README.md` -> `ci/README.md`) and the pair
+        # can never resolve
+        doc = doc.strip().removeprefix("./").strip("/")
         _require(doc not in seen_docs, f"{where}.doc duplicates an earlier pair for {doc!r}")
         seen_docs.add(doc)
         code = _str_list(entry.get("code"), f"{where}.code")
