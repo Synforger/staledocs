@@ -126,6 +126,12 @@ def _is_path_like(token: str) -> bool:
     for sep in ("(", "="):
         if sep in token and ("/" not in token or token.index(sep) < token.index("/")):
             return False
+    # `@scope/pkg` (and `@scope/pkg/subpath`) is a package specifier, not a
+    # repo path — it verifies as an identifier instead: import statements
+    # quote the specifier verbatim, so the grep checks that the dependency
+    # the doc names is actually used by the paired code
+    if token.startswith("@") and "/" in token:
+        return False
     return "/" in token.strip("/") or token.startswith("./")
 
 

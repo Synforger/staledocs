@@ -453,3 +453,31 @@ def test_prose_skip_requires_pure_lowercase_words(tmp_path: Path):
     )
     assert [f.token for f in findings] == ["gone/file.py", "Gone/dir", "v2/api"]
     assert skipped == []
+
+
+def test_package_specifier_verifies_as_identifier(tmp_path: Path):
+    # `@scope/pkg` is a package specifier: import statements quote it
+    # verbatim, so it greps the paired code instead of the file tree
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/app.ts").write_text('import { x } from "@acme/sdk";\n')
+    found = anchors.extract("d.md", "Depends on `@acme/sdk` and `@acme/gone`.\n", RULE)
+    assert [(a.token, a.path_like) for a in found] == [
+        ("@acme/sdk", False),
+        ("@acme/gone", False),
+    ]
+    pair_index = CodeIndex(tmp_path, ["src/app.ts"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, CodeIndex(tmp_path, []), set(), set()
+    )
+    assert [(f.token, f.scope) for f in findings] == [("@acme/gone", "pair")]
+
+
+def test_package_subpath_specifier_greps_verbatim(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/app.ts").write_text('import y from "@acme/sdk/dist/env";\n')
+    found = anchors.extract("d.md", "Uses `@acme/sdk/dist/env`.\n", RULE)
+    pair_index = CodeIndex(tmp_path, ["src/app.ts"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, CodeIndex(tmp_path, []), set(), set()
+    )
+    assert findings == []

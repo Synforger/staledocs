@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-16T08:10:19+00:00",
+    "at": "2026-07-16T08:14:13+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "5179855b3bd8d8957971f8f99b5a68d0067a712f",
+      "docs/reference/README.md": "bf651ae96190ca100dde1fdfcb8f5729c96c8102",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/engine.py": "8bbfaf70913546e63b3d8988f958f1831a8b9430",
       "src/staledocs/report.py": "2d3656fe1434f34ccfe93698a9c4ecd83cdeeadd"
     },
-    "commit": "4bcdeab7ada149222da708b67ece39bbb4da8f16",
+    "commit": "37e60a6425f68d071be237609b46bf78d671e5a6",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "report.py skipped_tokens is additive JSON; agent-integration flow unchanged"
+    "note": "docs/agent-integration.md flow unchanged by the anchors.py path-like classification change"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1
