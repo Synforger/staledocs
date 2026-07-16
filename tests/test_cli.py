@@ -399,7 +399,9 @@ def test_anchor_findings_carry_the_triage_hint(paired_repo):
     paired_repo.commit("doc quotes a gone identifier", "docs/auth.md")
     proc = _run(paired_repo.root, "check")
     assert "not found in" in proc.stdout
-    assert "rotted, or not built yet?" in proc.stdout
+    assert "rot -> fix the doc" in proc.stdout
+    assert "planned:<path>" in proc.stdout
+    assert "read the surrounding text" in proc.stdout
     assert "docs/setup" in proc.stdout
 
 
@@ -539,3 +541,27 @@ def test_red_breakdown_in_summary(paired_repo):
     assert breakdown["coverage"] == 0
     human = _run(paired_repo.root, "check")
     assert "(1 pairs, 1 anchors)" in human.stdout
+
+
+def test_planned_marker_never_red_and_counted(paired_repo):
+    paired_repo.write(
+        "docs/auth.md",
+        "# Auth\n\nUses `issue_token` from `src/auth/token.py`.\n"
+        "Refresh flow will land in `planned:src/auth/refresh.py`.\n",
+    )
+    paired_repo.commit("declare a planned reference")
+    _ack(paired_repo.root, "docs/auth.md", note="verified issue_token and src/auth/token.py")
+    # strict gate: a pending planned marker is a declaration, not a red
+    proc = _run(paired_repo.root, "check", "--json", "--gate", "strict")
+    payload = json.loads(proc.stdout)
+    assert payload["summary"]["planned"] == 1
+    assert payload["planned"]["pending"][0]["token"] == "src/auth/refresh.py"
+    assert payload["anchors"] == []
+    human = _run(paired_repo.root, "check")
+    assert "planned, not built yet" in human.stdout
+    assert "1 planned" in human.stdout
+    # the path lands -> the marker is flagged for removal, still not red
+    paired_repo.write("src/auth/refresh.py", "def refresh():\n    return 2\n")
+    paired_repo.commit("land the refresh flow")
+    human = _run(paired_repo.root, "check")
+    assert "remove the planned: marker" in human.stdout

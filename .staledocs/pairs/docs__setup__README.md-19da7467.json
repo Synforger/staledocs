@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-16T07:36:53+00:00",
+    "at": "2026-07-16T07:56:01+00:00",
     "code_blobs": {
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af"
     },
-    "commit": "ce68009763bd5f58ec979be7206bc9f41871377b",
-    "doc_blob": "db9fe322a77604064e064b3ebd442cce90f5339f",
-    "note": "setup doc now describes structural source-root detection and printed scope in cli.py init"
+    "commit": "56a4e46b85f99e65fad59034b77363a8ecbca778",
+    "doc_blob": "e72e2a5726e97a9982f41bde266b9011415b11dd",
+    "note": "docs/setup/README.md triage table now routes planned references to the planned: marker and adds the accurate-history bucket"
   },
   "doc": "docs/setup/README.md",
   "schema": 1

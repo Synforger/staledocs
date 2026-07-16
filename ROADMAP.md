@@ -13,16 +13,20 @@
 
 ## 検討中 (= まだ着手していない)
 
-- **`planned:` アンカーマーカー (= 仕様確定済み・実測待ち)**: 未実装 path の
-  引用を「予定」として申告する記法。設計は確定している —
-  (1) 消音ではなく **amber**: 「planned, not built」として毎回レポートに出続ける
-  (= config baseline の管轄外に消音手段を作らない、red 逃れに使っても全部見える)、
-  (2) path が実在に転じたら「resolved planned reference — remove the marker」を
-  黄で出す (= マーカー死骸化の機械検出)、
-  (3) check summary に planned 計数を常時表示 (= 溜まりすぎの可視化)。
-  **実装 trigger**: 実測フェーズで「finding 内の誘導 + setup の triage 表が
-  あっても planned 参照で実害が出た」実例 1 件。観測ゼロでの記法追加は
-  やらない (= 記法は最も取り消しにくい API、 案 B 棄却と同じ判断軸)
+- (`planned:` マーカーは実装済みへ移動 — 下記)
+
+## 実装済み (= develop、未 release)
+
+- **`planned:` アンカーマーカー**: 未実装 path の引用を `` `planned:<path>` ``
+  で「予定」として申告する記法。確定仕様どおり —
+  (1) 消音ではなく可視: pending は「planned, not built yet」として毎回
+  レポートに出続ける (= red 逃れに使っても全部見える)、
+  (2) path が実在に転じたら「remove the planned: marker」を黄で出す
+  (= マーカー死骸化の機械検出)、
+  (3) check summary に planned 計数 (= マーカー使用中の repo で常時、
+  溜まりすぎの可視化)。
+  実装 trigger は実測フェーズの field report で成立 (= triage 誘導があっても
+  live doc の将来 path 参照が red に混ざり、正確な記述を「修正」しかける実害)
 
 ## 採用しない方針 (= 過去に検討、 不採用判断、 再提案 NG)
 
