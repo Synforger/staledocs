@@ -132,6 +132,13 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
     ambers = result.amber_count()
     greens = sum(1 for p in result.pairs if p.state == GREEN)
     summary = f"staledocs: {reds} red, {ambers} amber, {greens} green pairs"
+    if reds:
+        # by class, so a big total is actionable: anchor reds fix docs,
+        # coverage reds fix pairing, mapping/config reds fix the config
+        parts = ", ".join(
+            f"{n} {kind}" for kind, n in result.red_breakdown().items() if n
+        )
+        summary += f" ({parts})"
     lines.append((red if reds else yellow if ambers else green)(summary))
     return "\n".join(lines)
 
@@ -180,6 +187,7 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
         "gate": gate,
         "summary": {
             "red": result.red_count(),
+            "red_breakdown": result.red_breakdown(),
             "amber": result.amber_count(),
             "green": sum(1 for p in result.pairs if p.state == GREEN),
         },

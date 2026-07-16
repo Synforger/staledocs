@@ -81,17 +81,23 @@ class CheckResult:
     config_baseline_missing: bool = False
     examples: object | None = None  # ExamplesReport when the layer is on
 
+    def red_breakdown(self) -> dict[str, int]:
+        """Red counts by finding class — a raw total buries what to fix
+        first (2000 anchor reds and 3 coverage reds are different jobs)."""
+        return {
+            "pairs": sum(1 for p in self.pairs if p.state in RED_STATES),
+            "anchors": len(self.anchor_findings),
+            "coverage": (
+                len(self.unclassified_docs)
+                + len(self.orphan_pairs)
+                + len(self.uncovered_source)
+            ),
+            "mapping": len(self.dead_pair_docs) + len(self.out_of_scope_pair_code),
+            "config": len(self.config_weakenings),
+        }
+
     def red_count(self) -> int:
-        return (
-            sum(1 for p in self.pairs if p.state in RED_STATES)
-            + len(self.anchor_findings)
-            + len(self.unclassified_docs)
-            + len(self.orphan_pairs)
-            + len(self.uncovered_source)
-            + len(self.dead_pair_docs)
-            + len(self.out_of_scope_pair_code)
-            + len(self.config_weakenings)
-        )
+        return sum(self.red_breakdown().values())
 
     def amber_count(self) -> int:
         return sum(1 for p in self.pairs if p.state == AMBER)

@@ -136,7 +136,11 @@ confirmation.
   "staledocs": "1.2.0",
   "schema": 1,
   "gate": "warn",
-  "summary": { "red": 2, "amber": 1, "green": 7 },
+  "summary": {
+    "red": 2, "amber": 1, "green": 7,
+    // by finding class — a raw total buries what to fix first
+    "red_breakdown": { "pairs": 1, "anchors": 1, "coverage": 0, "mapping": 0, "config": 0 }
+  },
   "pairs": [
     {
       "doc": "docs/auth.md",
