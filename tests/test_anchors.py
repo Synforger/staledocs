@@ -361,3 +361,35 @@ def test_path_with_equals_after_slash_stays_a_path():
     # query-ish or annotated path where `=` appears past the first slash
     got = anchors.extract("d.md", "See `docs/api?v=2` notes.\n", RULE)
     assert [(a.token, a.path_like) for a in got] == [("docs/api?v=2", True)]
+
+
+def test_brace_expansion_reports_only_missing_members(tmp_path: Path):
+    found = anchors.extract("d.md", "See `src/{real,gone}.py`.\n", RULE)
+    files = {"src/real.py"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert [f.token for f in findings] == ["src/gone.py"]
+
+
+def test_brace_expansion_passes_when_all_members_exist(tmp_path: Path):
+    found = anchors.extract("d.md", "Bridges: `bridge/{diag,logger}.cjs`.\n", RULE)
+    files = {"bridge/diag.cjs", "bridge/logger.cjs"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert findings == []
+
+
+def test_brace_without_comma_stays_literal(tmp_path: Path):
+    found = anchors.extract("d.md", "Uses `src/{name}/mod.py` layout.\n", RULE)
+    files = {"src/auth/mod.py"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert [f.token for f in findings] == ["src/{name}/mod.py"]
+
+
+def test_expand_braces_multiple_groups():
+    got = anchors.expand_braces("a/{x,y}/b.{md,py}")
+    assert got == ["a/x/b.md", "a/x/b.py", "a/y/b.md", "a/y/b.py"]
