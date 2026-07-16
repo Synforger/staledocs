@@ -478,3 +478,21 @@ def test_first_ack_on_anchorless_doc_falls_back_to_doc_name(paired_repo):
         paired_repo.root,
         "ack", "docs/plain.md", "--confirm", token, "-m", "read docs/plain.md in full",
     )
+
+
+def test_pair_doc_under_hidden_dir_keeps_leading_dot(paired_repo):
+    # lstrip("./") regression: `.ci/README.md` must not normalize to
+    # `ci/README.md` (a dead pair on a file that exists)
+    paired_repo.write(".ci/README.md", "# CI\n\nRuns `src/auth/token.py` checks.\n")
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text().replace(
+        'pairs:', 'pairs:\n  - doc: .ci/README.md\n    code: ["src/auth/**"]', 1
+    )
+    cfg = cfg.replace('include: ["docs/**/*.md"]', 'include: ["**/*.md"]')
+    paired_repo.write(".staledocs.yaml", cfg)
+    paired_repo.commit("hidden-dir doc")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["coverage"]["dead_pair_docs"] == []
+    assert ".ci/README.md" in payload["classification"]["paired"]
+    # ack accepts the same spelling the config uses
+    _ack(paired_repo.root, ".ci/README.md", note="CI doc still runs src/auth/token.py checks")
