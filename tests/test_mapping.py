@@ -136,3 +136,18 @@ def test_doc_itself_on_code_side_is_not_out_of_scope():
     )
     r = resolve(cfg, FILES)
     assert r.out_of_scope_pair_code == []
+
+
+def test_doc_matching_source_glob_is_not_uncovered_source():
+    # README.md matches a broad source glob too — it classifies as a doc,
+    # never as uncovered source (the doc-classification gate watches it)
+    cfg = _cfg(
+        source_include=["**"],
+        pairs=[PairRule(doc="docs/auth.md", code=["src/**"])],
+    )
+    r = resolve(cfg, FILES)
+    assert "README.md" not in r.uncovered_source
+    assert "docs/orphan.md" not in r.uncovered_source
+    assert "README.md" not in r.source_files
+    # real code is still subject to the coverage floor
+    assert all(f.endswith(".py") for f in r.source_files)

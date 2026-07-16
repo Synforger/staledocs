@@ -69,6 +69,11 @@ def resolve(cfg: Config, all_files: list[str]) -> MappingResult:
 
     result.source_files = globs.filter_paths(all_files, cfg.source_include, cfg.source_exclude)
     result.doc_files = globs.filter_paths(all_files, cfg.docs_include, cfg.docs_exclude)
+    # a file matching both scopes is a doc, never source: counting it as
+    # "uncovered source" too would demand a doc for a doc (double-counted
+    # red), while the doc-classification gate already watches it
+    doc_set = set(result.doc_files)
+    result.source_files = [f for f in result.source_files if f not in doc_set]
     file_set = set(all_files)
 
     classified: set[str] = set()

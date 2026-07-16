@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `version` | int | — (required) | config schema version, currently `1` |
 | `gate` | `warn` \| `strict` | `warn` | `strict` exits non-zero when red findings exist |
-| `source.include` | globs | — (required) | files subject to pairing and the coverage gate |
+| `source.include` | globs | — (required) | files subject to pairing and the coverage gate; a file that also matches the docs scope classifies as a doc, never as source (no double-counted coverage red) |
 | `source.exclude` | globs | `[]` | carve-outs (vendored, generated) |
 | `docs.include` | globs | `docs/**/*.md`, `README.md` | files treated as docs |
 | `docs.exclude` | globs | `[]` | |
