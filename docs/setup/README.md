@@ -16,9 +16,13 @@ one hard requirement.
 staledocs init
 ```
 
-This writes a commented `.staledocs.yaml` (source/docs globs guessed from
-your tree) and creates the `.staledocs/pairs/` ledger directory. Declare
-your pairs, then:
+This writes a commented `.staledocs.yaml` (source roots are the top-level
+dirs that hold tracked code — structural, not a name whitelist; docs are
+every tracked `**/*.md`) and creates the `.staledocs/pairs/` ledger
+directory. The guess is printed, never silent: init lists the roots it
+detected, the top-level dirs it left out, and any frozen-docs subtrees
+(`archive`/`legacy`/`history` paths) it suggests excluding — the tool
+proposes, you declare. Declare your pairs, then:
 
 ```sh
 staledocs check      # everything shows UNACKED / uncovered — expected

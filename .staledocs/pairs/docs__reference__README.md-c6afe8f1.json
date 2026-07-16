@@ -1,10 +1,10 @@
 {
   "ack": {
-    "at": "2026-07-16T07:32:27+00:00",
+    "at": "2026-07-16T07:36:53+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
       "src/staledocs/anchors.py": "f11176aabd7314c54527fc6364de3f882d34c285",
-      "src/staledocs/cli.py": "f0a85dcc7ab508086c62c577ee5f7bfca6f11c29",
+      "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
       "src/staledocs/engine.py": "bdab5d50afab7ed1415c06cbb915710a1a4836d0",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
@@ -15,9 +15,9 @@
       "src/staledocs/report.py": "de8089a300e166a02db1e6e16c9c447ee66401b8",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "05d6f3c947a7d907a2e2664c9095a1c2f6262277",
+    "commit": "ce68009763bd5f58ec979be7206bc9f41871377b",
     "doc_blob": "c241e6d473d51b341e92a7fdff6114d66ce548b6",
-    "note": "resolution notes now document expand_braces member-level verification added in anchors.py"
+    "note": "reference resolution notes unaffected: cli.py change is init scaffolding, anchors.py contract unchanged"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

@@ -496,3 +496,33 @@ def test_pair_doc_under_hidden_dir_keeps_leading_dot(paired_repo):
     assert ".ci/README.md" in payload["classification"]["paired"]
     # ack accepts the same spelling the config uses
     _ack(paired_repo.root, ".ci/README.md", note="CI doc still runs src/auth/token.py checks")
+
+
+def test_init_detects_multi_root_source_structurally(repo):
+    # sdk/ is not in any name whitelist — it qualifies because it holds code
+    repo.write("sdk/core/engine.cpp", "int main() { return 0; }\n")
+    repo.write("app/main.py", "pass\n")
+    repo.write("design/notes.md", "# Notes\n")
+    repo.commit("seed")
+    proc = _run(repo.root, "init")
+    cfg = (repo.root / ".staledocs.yaml").read_text()
+    assert '- "sdk/**"' in cfg
+    assert '- "app/**"' in cfg
+    assert '- "design/**"' not in cfg
+    assert '- "**/*.md"' in cfg
+    assert "source roots detected" in proc.stdout
+    assert "sdk" in proc.stdout
+    assert "left out (no tracked code found" in proc.stdout
+    assert "design" in proc.stdout
+
+
+def test_init_proposes_frozen_docs_exclusions(repo):
+    repo.write("src/x.py", "pass\n")
+    repo.write("docs/archive/old-plan.md", "# Old\n")
+    repo.write("docs/current.md", "# Now\n")
+    repo.commit("seed")
+    proc = _run(repo.root, "init")
+    assert "frozen-docs candidates" in proc.stdout
+    assert '"docs/archive/**"' in proc.stdout
+    # proposal only — the scaffold config must not pre-apply the exclusion
+    assert "docs/archive" not in (repo.root / ".staledocs.yaml").read_text()
