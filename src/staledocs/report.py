@@ -125,14 +125,24 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
                 "docs/setup)"
             )
         )
-    if result.skipped_tokens:
-        # declined, not judged — the count stays visible (see --json for
-        # the tokens) so this can never become a silent blind spot
+    missing = [st.doc for st in result.anchor_statuses if st.baseline_missing]
+    if missing:
+        # unarmed is never silent coverage: until a doc's claims are recorded
+        # at an ack, its anchors gate nothing — say so every run
+        lines.append(
+            yellow(
+                f"[anchors] {len(missing)} doc(s) have no anchor baseline — "
+                "their anchors are not gating yet; ack them to arm "
+                "(unresolved tokens are listed in --json for one-time review)"
+            )
+        )
+    armed = sum(st.armed for st in result.anchor_statuses)
+    unarmed = sum(st.unarmed for st in result.anchor_statuses)
+    if unarmed:
         lines.append(
             dim(
-                f"[anchor] {len(result.skipped_tokens)} prose-like slash "
-                "token(s) skipped as non-path (`min/max` class) — full list "
-                "in --json"
+                f"[anchors] {armed} armed claim(s), {unarmed} unarmed token(s) "
+                "(unarmed tokens never gate; the next ack arms whatever resolves)"
             )
         )
     for f in result.planned_pending:
@@ -231,7 +241,20 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "pending": [asdict(a) for a in result.planned_pending],
             "resolved": [asdict(a) for a in result.planned_resolved],
         },
-        "skipped_tokens": [asdict(s) for s in result.skipped_tokens],
+        "anchor_status": {
+            "baseline_missing": [
+                st.doc for st in result.anchor_statuses if st.baseline_missing
+            ],
+            "per_doc": {
+                st.doc: {
+                    "armed": st.armed,
+                    "unarmed": st.unarmed,
+                    "unarmed_tokens": st.unarmed_tokens,
+                }
+                for st in result.anchor_statuses
+                if st.armed or st.unarmed
+            },
+        },
         "coverage": {
             "unclassified_docs": result.unclassified_docs,
             "orphan_pairs": result.orphan_pairs,

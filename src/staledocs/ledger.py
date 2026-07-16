@@ -28,6 +28,10 @@ class Ack:
     code_blobs: dict[str, str]
     at: str
     note: str = ""
+    # claims proven to resolve at ack time — the anchor baseline. None means
+    # the entry predates anchor baselines (v1 ledger): anchors stay unarmed
+    # until the next ack records them
+    anchors: list[str] | None = None
 
 
 def pair_id(doc: str) -> str:
@@ -59,12 +63,17 @@ def read_ack(repo_root: Path, doc: str) -> Ack | None:
     code_blobs = ack.get("code_blobs")
     if not isinstance(doc_blob, str) or not isinstance(code_blobs, dict):
         return None
+    anchors_raw = ack.get("anchors")
+    anchors = (
+        sorted(str(t) for t in anchors_raw) if isinstance(anchors_raw, list) else None
+    )
     return Ack(
         commit=ack.get("commit"),
         doc_blob=doc_blob,
         code_blobs={str(k): str(v) for k, v in code_blobs.items()},
         at=str(ack.get("at", "")),
         note=str(ack.get("note", "")),
+        anchors=anchors,
     )
 
 
@@ -75,6 +84,7 @@ def write_ack(
     doc_blob: str,
     code_blobs: dict[str, str],
     note: str = "",
+    anchors: list[str] | None = None,
 ) -> Path:
     path = _path(repo_root, doc)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,6 +97,7 @@ def write_ack(
             "code_blobs": dict(sorted(code_blobs.items())),
             "at": datetime.now(UTC).isoformat(timespec="seconds"),
             "note": note,
+            "anchors": sorted(anchors) if anchors is not None else None,
         },
     }
     tmp = path.with_suffix(".json.tmp")
@@ -227,3 +238,47 @@ def config_weakenings(old: dict, new: dict) -> list[str]:
         if tag not in new.get("examples_wired", []):
             out.append(f"example runner unwired: {tag!r}")
     return out
+
+
+# --- anchor baselines for docs without a pair ledger (global / standalone) --
+#
+# Pair docs carry their anchor baseline inside the pair ack. Global and
+# standalone docs have no pair, so their baseline lives as one JSON file per
+# doc under `.staledocs/anchors/` — same fail-safe rule: an unreadable file
+# is no baseline at all, the doc simply reports unarmed again.
+
+ANCHOR_DIR = ".staledocs/anchors"
+
+
+def read_anchor_baseline(repo_root: Path, doc: str) -> list[str] | None:
+    path = repo_root / ANCHOR_DIR / f"{pair_id(doc)}.json"
+    if not path.is_file():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
+        return None
+    anchors = raw.get("anchors")
+    if not isinstance(anchors, list):
+        return None
+    return sorted(str(t) for t in anchors)
+
+
+def write_anchor_baseline(
+    repo_root: Path, doc: str, anchors: list[str], note: str = ""
+) -> Path:
+    path = repo_root / ANCHOR_DIR / f"{pair_id(doc)}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": SCHEMA,
+        "doc": doc,
+        "anchors": sorted(anchors),
+        "note": note,
+        "at": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return path
