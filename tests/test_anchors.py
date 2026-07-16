@@ -361,3 +361,150 @@ def test_path_with_equals_after_slash_stays_a_path():
     # query-ish or annotated path where `=` appears past the first slash
     got = anchors.extract("d.md", "See `docs/api?v=2` notes.\n", RULE)
     assert [(a.token, a.path_like) for a in got] == [("docs/api?v=2", True)]
+
+
+def test_brace_expansion_reports_only_missing_members(tmp_path: Path):
+    found = anchors.extract("d.md", "See `src/{real,gone}.py`.\n", RULE)
+    files = {"src/real.py"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert [f.token for f in findings] == ["src/gone.py"]
+
+
+def test_brace_expansion_passes_when_all_members_exist(tmp_path: Path):
+    found = anchors.extract("d.md", "Bridges: `bridge/{diag,logger}.cjs`.\n", RULE)
+    files = {"bridge/diag.cjs", "bridge/logger.cjs"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert findings == []
+
+
+def test_brace_without_comma_stays_literal(tmp_path: Path):
+    found = anchors.extract("d.md", "Uses `src/{name}/mod.py` layout.\n", RULE)
+    files = {"src/auth/mod.py"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert [f.token for f in findings] == ["src/{name}/mod.py"]
+
+
+def test_expand_braces_multiple_groups():
+    got = anchors.expand_braces("a/{x,y}/b.{md,py}")
+    assert got == ["a/x/b.md", "a/x/b.py", "a/y/b.md", "a/y/b.py"]
+
+
+def test_planned_marker_pending_and_resolved(tmp_path: Path):
+    text = "Will land in `planned:src/future.py`; already here: `planned:src/real.py`.\n"
+    found = anchors.extract("d.md", text, RULE)
+    assert [(a.token, a.planned) for a in found] == [
+        ("src/future.py", True),
+        ("src/real.py", True),
+    ]
+    files = {"src/real.py"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert [(f.token, f.planned) for f in findings] == [
+        ("src/future.py", "pending"),
+        ("src/real.py", "resolved"),
+    ]
+
+
+def test_prose_slash_construction_is_skipped_and_counted(tmp_path: Path):
+    text = "Clamp to `min/max` values; see `src/gone.py`.\n"
+    found = anchors.extract("d.md", text, RULE)
+    files = {"src/real.py"}
+    skipped: list = []
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), skipped=skipped,
+    )
+    # the prose token is declined, the real rot still reds
+    assert [f.token for f in findings] == ["src/gone.py"]
+    assert [(s.token, s.reason) for s in skipped] == [("min/max", "prose")]
+
+
+def test_prose_shape_with_tracked_head_dir_stays_verified(tmp_path: Path):
+    # `src/auth` missing its tail is rot, not prose — the head names a
+    # tracked directory, so full verification applies
+    found = anchors.extract("d.md", "Lives in `src/gone`.\n", RULE)
+    files = {"src/real.py"}
+    skipped: list = []
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), skipped=skipped,
+    )
+    assert [f.token for f in findings] == ["src/gone"]
+    assert skipped == []
+
+
+def test_prose_skip_requires_pure_lowercase_words(tmp_path: Path):
+    # an extension, an uppercase letter, or a digit keeps verification on
+    files = {"src/real.py"}
+    skipped: list = []
+    found = anchors.extract(
+        "d.md", "See `gone/file.py` and `Gone/dir` and `v2/api`.\n", RULE
+    )
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), skipped=skipped,
+    )
+    assert [f.token for f in findings] == ["gone/file.py", "Gone/dir", "v2/api"]
+    assert skipped == []
+
+
+def test_package_specifier_verifies_as_identifier(tmp_path: Path):
+    # `@scope/pkg` is a package specifier: import statements quote it
+    # verbatim, so it greps the paired code instead of the file tree
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/app.ts").write_text('import { x } from "@acme/sdk";\n')
+    found = anchors.extract("d.md", "Depends on `@acme/sdk` and `@acme/gone`.\n", RULE)
+    assert [(a.token, a.path_like) for a in found] == [
+        ("@acme/sdk", False),
+        ("@acme/gone", False),
+    ]
+    pair_index = CodeIndex(tmp_path, ["src/app.ts"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, CodeIndex(tmp_path, []), set(), set()
+    )
+    assert [(f.token, f.scope) for f in findings] == [("@acme/gone", "pair")]
+
+
+def test_package_subpath_specifier_greps_verbatim(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/app.ts").write_text('import y from "@acme/sdk/dist/env";\n')
+    found = anchors.extract("d.md", "Uses `@acme/sdk/dist/env`.\n", RULE)
+    pair_index = CodeIndex(tmp_path, ["src/app.ts"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, CodeIndex(tmp_path, []), set(), set()
+    )
+    assert findings == []
+
+
+def test_pair_miss_hint_names_where_the_identifier_lives(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/auth.py").write_text("def open_session():\n    pass\n")
+    (tmp_path / "src/other.py").write_text("def issue_token():\n    pass\n")
+    found = anchors.extract("d.md", "Uses `issue_token` heavily.\n", RULE)
+    pair_index = CodeIndex(tmp_path, ["src/auth.py"])
+    repo_index = CodeIndex(tmp_path, ["src/auth.py", "src/other.py"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, repo_index, set(), set()
+    )
+    # still red — a same-named survivor elsewhere never softens the signal
+    assert [(f.token, f.scope) for f in findings] == [("issue_token", "pair")]
+    assert "exists in src/other.py" in findings[0].hint
+
+
+def test_pair_miss_with_no_survivor_has_no_hint(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/auth.py").write_text("def open_session():\n    pass\n")
+    found = anchors.extract("d.md", "Uses `issue_token` heavily.\n", RULE)
+    pair_index = CodeIndex(tmp_path, ["src/auth.py"])
+    repo_index = CodeIndex(tmp_path, ["src/auth.py"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, repo_index, set(), set()
+    )
+    assert findings[0].hint == ""

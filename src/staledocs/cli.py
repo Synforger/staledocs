@@ -20,6 +20,52 @@ from .config import (
     load,
 )
 
+# extensions that mark a top-level directory as a source root during init.
+# Detection is structural (what the dir holds), not a directory-name
+# whitelist — `sdk/`, `bindings/`, a dotted tooling dir all qualify when
+# they hold tracked code
+_CODE_EXTENSIONS = {
+    ".bash", ".c", ".cc", ".cjs", ".clj", ".cpp", ".cs", ".dart", ".erl",
+    ".ex", ".exs", ".go", ".h", ".hh", ".hpp", ".hs", ".java", ".jl", ".js",
+    ".jsx", ".kt", ".kts", ".lua", ".m", ".mjs", ".ml", ".mm", ".nim", ".php",
+    ".pl", ".pm", ".ps1", ".py", ".pyi", ".r", ".rb", ".rs", ".scala", ".sh",
+    ".sql", ".svelte", ".swift", ".ts", ".tsx", ".vue", ".zig", ".zsh",
+}
+
+# path segments that mark a docs subtree as a frozen history snapshot —
+# an exclusion candidate init proposes, never applies (the human declares)
+_FROZEN_SEGMENTS = {"archive", "_archive", "attic", "history", "legacy"}
+
+
+def _detect_source_roots(tracked: list[str]) -> tuple[list[str], list[str]]:
+    """Top-level dirs split into (holds tracked code, holds none)."""
+    with_code: set[str] = set()
+    all_dirs: set[str] = set()
+    for f in tracked:
+        if "/" not in f:
+            continue
+        top = f.split("/", 1)[0]
+        all_dirs.add(top)
+        name = f.rsplit("/", 1)[-1]
+        ext = ("." + name.rsplit(".", 1)[-1].lower()) if "." in name else ""
+        if ext in _CODE_EXTENSIONS:
+            with_code.add(top)
+    return sorted(with_code), sorted(all_dirs - with_code)
+
+
+def _frozen_docs_candidates(tracked: list[str]) -> list[str]:
+    """Doc subtrees whose path names them as history (archive/legacy/...)."""
+    out: set[str] = set()
+    for f in tracked:
+        if not f.endswith((".md", ".rst")):
+            continue
+        segments = f.split("/")[:-1]
+        for i, seg in enumerate(segments):
+            if seg.lower() in _FROZEN_SEGMENTS:
+                out.add("/".join(segments[: i + 1]) + "/**")
+                break
+    return sorted(out)
+
 
 def _repo_root() -> Path:
     try:
@@ -68,12 +114,14 @@ def init(with_suggest: bool) -> None:
         raise click.ClickException(f"{CONFIG_NAME} already exists")
 
     tracked = gitio.ls_files(repo_root)
-    top_dirs = sorted({f.split("/", 1)[0] for f in tracked if "/" in f})
-    code_dirs = [d for d in top_dirs if d in ("src", "lib", "app", "scripts")] or (
-        ["src"] if "src" in top_dirs else top_dirs[:1] or ["src"]
-    )
+    code_dirs, no_code_dirs = _detect_source_roots(tracked)
+    if not code_dirs:
+        code_dirs = ["src"]
     source_include = "\n".join(f'    - "{d}/**"' for d in code_dirs)
-    docs_include = '    - "docs/**/*.md"\n    - "README.md"'
+    # every tracked markdown file, wherever it lives — stray READMEs and
+    # notes next to code are exactly the docs that rot first, and a
+    # docs/-only default made them silently invisible
+    docs_include = '    - "**/*.md"'
 
     cfg_path.write_text(
         DEFAULT_CONFIG_TEMPLATE.format(
@@ -99,6 +147,23 @@ def init(with_suggest: bool) -> None:
     click.echo(
         "config baseline recorded (edits from here on are diffed against the scaffold)"
     )
+    # the scope guess is printed, never silent: an under-scoped source list
+    # at init is the most dangerous failure mode — everything looks covered
+    # while whole roots are invisible
+    click.echo(f"source roots detected (hold tracked code): {', '.join(code_dirs)}")
+    if no_code_dirs:
+        click.echo(
+            "top-level dirs left out (no tracked code found — add to "
+            f"source.include if wrong): {', '.join(no_code_dirs)}"
+        )
+    frozen = _frozen_docs_candidates(tracked)
+    if frozen:
+        click.echo(
+            "frozen-docs candidates (history snapshots usually should not "
+            "gate — consider docs.exclude):"
+        )
+        for pattern in frozen:
+            click.echo(f'  - "{pattern}"')
     if with_suggest:
         click.echo()
         _print_suggestions(repo_root)
@@ -245,7 +310,7 @@ def ack(
             click.echo("no broken pairs — nothing to ack")
             return
     elif docs:
-        targets = [d.strip().lstrip("./") for d in docs]
+        targets = [d.strip().removeprefix("./").strip("/") for d in docs]
         for doc in targets:
             if doc not in by_doc:
                 raise click.ClickException(
@@ -331,7 +396,7 @@ def explain(docs: tuple[str, ...], as_json: bool) -> None:
     cfg = _load_config(repo_root)
     resolved = _resolve(repo_root, cfg)
     mention_ctx = engine.make_mention_ctx(repo_root, cfg)
-    wanted = {d.strip().lstrip("./") for d in docs} if docs else None
+    wanted = {d.strip().removeprefix("./").strip("/") for d in docs} if docs else None
 
     blocks: list[dict] = []
     for pair in resolved.pairs:

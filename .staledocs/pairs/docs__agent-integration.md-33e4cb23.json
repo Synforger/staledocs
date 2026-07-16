@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-15T20:24:54+00:00",
+    "at": "2026-07-16T08:23:32+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "0860bcb8678e41f34f9bd4c4a69ad28ba9d19596",
-      "src/staledocs/cli.py": "7cb911f027ae8b69dd1be92049b62d5705c53e65",
-      "src/staledocs/engine.py": "bdab5d50afab7ed1415c06cbb915710a1a4836d0",
-      "src/staledocs/report.py": "de8089a300e166a02db1e6e16c9c447ee66401b8"
+      "docs/reference/README.md": "3ff41c42571504511d2df1b2fc5e82c938a2a650",
+      "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
+      "src/staledocs/engine.py": "8562b8f2719a75ea062237414cc53f6046692a64",
+      "src/staledocs/report.py": "6e4ed33a74701aa8de9598c7fd5d4922e0de6c01"
     },
-    "commit": "f6072614f0cb7e762ded4c46d91c7997a6c31f89",
+    "commit": "b7bfe0d56ab8b42521c19399aae053bde476ecf1",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "engine.py/cli.py change adds claims evidence + tightened first-ack note check; agent JSON contract only gains the claims key"
+    "note": "docs/agent-integration.md flow unchanged; anchor finding hint is additive JSON"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

@@ -1,23 +1,23 @@
 {
   "ack": {
-    "at": "2026-07-15T20:35:58+00:00",
+    "at": "2026-07-16T08:23:33+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
-      "src/staledocs/anchors.py": "ebcfdb07e5aeb7e4cce879d3bf67eb8e94189a04",
-      "src/staledocs/cli.py": "7cb911f027ae8b69dd1be92049b62d5705c53e65",
-      "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681",
-      "src/staledocs/engine.py": "bdab5d50afab7ed1415c06cbb915710a1a4836d0",
+      "src/staledocs/anchors.py": "8b1010496cec0c4be16968af60d6ffd10cac941b",
+      "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
+      "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
+      "src/staledocs/engine.py": "8562b8f2719a75ea062237414cc53f6046692a64",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
       "src/staledocs/gitio.py": "477c74d4351b9ba199ba4b57fb32675d6e8a8aed",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
-      "src/staledocs/mapping.py": "a3b9785b5510a0e38b305d93a4072ace8299bbd0",
-      "src/staledocs/report.py": "de8089a300e166a02db1e6e16c9c447ee66401b8",
+      "src/staledocs/mapping.py": "1cbe8595bb1d7bd4567f44da6294cba9fec81a5f",
+      "src/staledocs/report.py": "6e4ed33a74701aa8de9598c7fd5d4922e0de6c01",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "fff3b6abaf70515d9dd9060c7f55f02e25fc8a37",
-    "doc_blob": "0860bcb8678e41f34f9bd4c4a69ad28ba9d19596",
-    "note": "version bump only: __init__.py 1.3.1 -> 1.4.0"
+    "commit": "b7bfe0d56ab8b42521c19399aae053bde476ecf1",
+    "doc_blob": "3ff41c42571504511d2df1b2fc5e82c938a2a650",
+    "note": "docs/reference/README.md resolution notes now document the pair-miss elsewhere hint from anchors.py"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

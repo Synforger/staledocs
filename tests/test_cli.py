@@ -399,7 +399,9 @@ def test_anchor_findings_carry_the_triage_hint(paired_repo):
     paired_repo.commit("doc quotes a gone identifier", "docs/auth.md")
     proc = _run(paired_repo.root, "check")
     assert "not found in" in proc.stdout
-    assert "rotted, or not built yet?" in proc.stdout
+    assert "rot -> fix the doc" in proc.stdout
+    assert "planned:<path>" in proc.stdout
+    assert "read the surrounding text" in proc.stdout
     assert "docs/setup" in proc.stdout
 
 
@@ -478,3 +480,115 @@ def test_first_ack_on_anchorless_doc_falls_back_to_doc_name(paired_repo):
         paired_repo.root,
         "ack", "docs/plain.md", "--confirm", token, "-m", "read docs/plain.md in full",
     )
+
+
+def test_pair_doc_under_hidden_dir_keeps_leading_dot(paired_repo):
+    # lstrip("./") regression: `.ci/README.md` must not normalize to
+    # `ci/README.md` (a dead pair on a file that exists)
+    paired_repo.write(".ci/README.md", "# CI\n\nRuns `src/auth/token.py` checks.\n")
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text().replace(
+        'pairs:', 'pairs:\n  - doc: .ci/README.md\n    code: ["src/auth/**"]', 1
+    )
+    cfg = cfg.replace('include: ["docs/**/*.md"]', 'include: ["**/*.md"]')
+    paired_repo.write(".staledocs.yaml", cfg)
+    paired_repo.commit("hidden-dir doc")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["coverage"]["dead_pair_docs"] == []
+    assert ".ci/README.md" in payload["classification"]["paired"]
+    # ack accepts the same spelling the config uses
+    _ack(paired_repo.root, ".ci/README.md", note="CI doc still runs src/auth/token.py checks")
+
+
+def test_init_detects_multi_root_source_structurally(repo):
+    # sdk/ is not in any name whitelist — it qualifies because it holds code
+    repo.write("sdk/core/engine.cpp", "int main() { return 0; }\n")
+    repo.write("app/main.py", "pass\n")
+    repo.write("design/notes.md", "# Notes\n")
+    repo.commit("seed")
+    proc = _run(repo.root, "init")
+    cfg = (repo.root / ".staledocs.yaml").read_text()
+    assert '- "sdk/**"' in cfg
+    assert '- "app/**"' in cfg
+    assert '- "design/**"' not in cfg
+    assert '- "**/*.md"' in cfg
+    assert "source roots detected" in proc.stdout
+    assert "sdk" in proc.stdout
+    assert "left out (no tracked code found" in proc.stdout
+    assert "design" in proc.stdout
+
+
+def test_init_proposes_frozen_docs_exclusions(repo):
+    repo.write("src/x.py", "pass\n")
+    repo.write("docs/archive/old-plan.md", "# Old\n")
+    repo.write("docs/current.md", "# Now\n")
+    repo.commit("seed")
+    proc = _run(repo.root, "init")
+    assert "frozen-docs candidates" in proc.stdout
+    assert '"docs/archive/**"' in proc.stdout
+    # proposal only — the scaffold config must not pre-apply the exclusion
+    assert "docs/archive" not in (repo.root / ".staledocs.yaml").read_text()
+
+
+def test_red_breakdown_in_summary(paired_repo):
+    # one UNACKED pair (pairs class) + one dead anchor (anchors class)
+    paired_repo.write("docs/auth.md", "# Auth\n\nUses `src/auth/gone.py`.\n")
+    paired_repo.commit("rot the doc")
+    proc = _run(paired_repo.root, "check", "--json")
+    breakdown = json.loads(proc.stdout)["summary"]["red_breakdown"]
+    assert breakdown["pairs"] == 1
+    assert breakdown["anchors"] == 1
+    assert breakdown["coverage"] == 0
+    human = _run(paired_repo.root, "check")
+    assert "(1 pairs, 1 anchors)" in human.stdout
+
+
+def test_planned_marker_never_red_and_counted(paired_repo):
+    paired_repo.write(
+        "docs/auth.md",
+        "# Auth\n\nUses `issue_token` from `src/auth/token.py`.\n"
+        "Refresh flow will land in `planned:src/auth/refresh.py`.\n",
+    )
+    paired_repo.commit("declare a planned reference")
+    _ack(paired_repo.root, "docs/auth.md", note="verified issue_token and src/auth/token.py")
+    # strict gate: a pending planned marker is a declaration, not a red
+    proc = _run(paired_repo.root, "check", "--json", "--gate", "strict")
+    payload = json.loads(proc.stdout)
+    assert payload["summary"]["planned"] == 1
+    assert payload["planned"]["pending"][0]["token"] == "src/auth/refresh.py"
+    assert payload["anchors"] == []
+    human = _run(paired_repo.root, "check")
+    assert "planned, not built yet" in human.stdout
+    assert "1 planned" in human.stdout
+    # the path lands -> the marker is flagged for removal, still not red
+    paired_repo.write("src/auth/refresh.py", "def refresh():\n    return 2\n")
+    paired_repo.commit("land the refresh flow")
+    human = _run(paired_repo.root, "check")
+    assert "remove the planned: marker" in human.stdout
+
+
+def test_prose_skip_surfaces_in_json_and_summary(paired_repo):
+    paired_repo.write(
+        "docs/auth.md",
+        "# Auth\n\nUses `issue_token` from `src/auth/token.py`, clamps `min/max`.\n",
+    )
+    paired_repo.commit("prose token")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["skipped_tokens"] == [
+        {"doc": "docs/auth.md", "line": 3, "token": "min/max", "reason": "prose"}
+    ]
+    human = _run(paired_repo.root, "check")
+    assert "1 prose-like slash token(s) skipped" in human.stdout
+
+
+def test_glob_pair_no_match_is_red_in_check(paired_repo):
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text().replace(
+        'pairs:', 'pairs:\n  - doc: guides/**/*.md\n    code: ["src/**"]', 1
+    )
+    paired_repo.write(".staledocs.yaml", cfg)
+    paired_repo.commit("dangling glob pair")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["coverage"]["glob_pair_no_match"] == ["guides/**/*.md"]
+    assert payload["summary"]["red_breakdown"]["mapping"] == 1

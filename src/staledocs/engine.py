@@ -75,23 +75,42 @@ class CheckResult:
     orphan_pairs: list[str] = field(default_factory=list)
     uncovered_source: list[str] = field(default_factory=list)
     dead_pair_docs: list[str] = field(default_factory=list)
+    glob_pair_no_match: list[str] = field(default_factory=list)
     out_of_scope_pair_code: list[str] = field(default_factory=list)
     stale_ledger_docs: list[str] = field(default_factory=list)
     config_weakenings: list[str] = field(default_factory=list)
     config_baseline_missing: bool = False
     examples: object | None = None  # ExamplesReport when the layer is on
+    # `planned:` markers — declared not-built-yet references: pending ones
+    # report every run (a declaration, not a silencer), resolved ones flag
+    # the marker for removal
+    planned_pending: list[AnchorFinding] = field(default_factory=list)
+    planned_resolved: list[AnchorFinding] = field(default_factory=list)
+    # tokens verification declined to judge (prose slash constructions) —
+    # the count stays visible so the decline can never hide real rot silently
+    skipped_tokens: list[anchors_mod.SkippedToken] = field(default_factory=list)
+
+    def red_breakdown(self) -> dict[str, int]:
+        """Red counts by finding class — a raw total buries what to fix
+        first (2000 anchor reds and 3 coverage reds are different jobs)."""
+        return {
+            "pairs": sum(1 for p in self.pairs if p.state in RED_STATES),
+            "anchors": len(self.anchor_findings),
+            "coverage": (
+                len(self.unclassified_docs)
+                + len(self.orphan_pairs)
+                + len(self.uncovered_source)
+            ),
+            "mapping": (
+                len(self.dead_pair_docs)
+                + len(self.glob_pair_no_match)
+                + len(self.out_of_scope_pair_code)
+            ),
+            "config": len(self.config_weakenings),
+        }
 
     def red_count(self) -> int:
-        return (
-            sum(1 for p in self.pairs if p.state in RED_STATES)
-            + len(self.anchor_findings)
-            + len(self.unclassified_docs)
-            + len(self.orphan_pairs)
-            + len(self.uncovered_source)
-            + len(self.dead_pair_docs)
-            + len(self.out_of_scope_pair_code)
-            + len(self.config_weakenings)
-        )
+        return sum(self.red_breakdown().values())
 
     def amber_count(self) -> int:
         return sum(1 for p in self.pairs if p.state == AMBER)
@@ -376,6 +395,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         orphan_pairs=mapping.orphan_pairs,
         uncovered_source=mapping.uncovered_source,
         dead_pair_docs=mapping.dead_pair_docs,
+        glob_pair_no_match=mapping.glob_pair_no_match,
         out_of_scope_pair_code=mapping.out_of_scope_pair_code,
     )
 
@@ -437,6 +457,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                 cfg.anchors.path_roots,
                 check_ignored,
                 cfg.anchors.branch_prefixes,
+                skipped=result.skipped_tokens,
             )
         )
 
@@ -465,8 +486,15 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                     cfg.anchors.path_roots,
                     check_ignored,
                     cfg.anchors.branch_prefixes,
+                    skipped=result.skipped_tokens,
                 )
             )
+
+    # planned markers travel through verify() with the ordinary anchors,
+    # then split into their own never-red streams
+    result.planned_pending = [f for f in result.anchor_findings if f.planned == "pending"]
+    result.planned_resolved = [f for f in result.anchor_findings if f.planned == "resolved"]
+    result.anchor_findings = [f for f in result.anchor_findings if not f.planned]
 
     _ = all_files  # reserved for future scope tuning
     return result

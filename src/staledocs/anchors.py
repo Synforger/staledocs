@@ -28,6 +28,12 @@ _NUMBERLIKE_RE = re.compile(r"^[\d\s.,:%+\-*/=<>()]+$")
 _CODE_PUNCT = set("_./:-()[]<>=$@")
 
 
+# a doc declares a not-built-yet reference as `planned:path/to/thing`.
+# Declaration, not silence: pending markers stay visible as their own class
+# in every report, and a marker whose path has landed is flagged for removal
+PLANNED_PREFIX = "planned:"
+
+
 @dataclass
 class Anchor:
     doc: str
@@ -35,6 +41,7 @@ class Anchor:
     token: str
     path_like: bool
     doc_dir: str = ""
+    planned: bool = False
 
 
 @dataclass
@@ -43,6 +50,42 @@ class AnchorFinding:
     line: int
     token: str
     scope: str  # "pair" | "repo"
+    planned: str = ""  # "" (a normal finding) | "pending" | "resolved"
+    # pair-scope identifier misses only: where the token actually lives when
+    # the wider repo still has it. The finding stays red — a same-named
+    # survivor elsewhere must never soften a rename signal — but the triage
+    # gets the evidence: cross-pair reference vs true rot at a glance
+    hint: str = ""
+
+
+@dataclass
+class SkippedToken:
+    """A token verification declined to judge — counted, never silent."""
+
+    doc: str
+    line: int
+    token: str
+    reason: str  # "prose"
+
+
+def _prose_like(token: str, all_dirs: set[str], path_roots: list[str] | None) -> bool:
+    """`min/max`, `try/catch` — an English construction, not a path claim.
+
+    Two all-lowercase words around one slash, no extension, and the head
+    names no tracked directory (directly or under a path root). A head that
+    IS a tracked dir keeps full verification — `src/auth` missing its tail
+    is real rot, not prose.
+    """
+    if token.count("/") != 1:
+        return False
+    head, _, tail = token.partition("/")
+    if not (head.isalpha() and head.islower() and tail.isalpha() and tail.islower()):
+        return False
+    if head in all_dirs:
+        return False
+    return not any(
+        f"{r.strip('/')}/{head}" in all_dirs for r in (path_roots or [])
+    )
 
 
 def _looks_like_code(token: str, min_length: int) -> bool:
@@ -88,6 +131,12 @@ def _is_path_like(token: str) -> bool:
     for sep in ("(", "="):
         if sep in token and ("/" not in token or token.index(sep) < token.index("/")):
             return False
+    # `@scope/pkg` (and `@scope/pkg/subpath`) is a package specifier, not a
+    # repo path — it verifies as an identifier instead: import statements
+    # quote the specifier verbatim, so the grep checks that the dependency
+    # the doc names is actually used by the paired code
+    if token.startswith("@") and "/" in token:
+        return False
     return "/" in token.strip("/") or token.startswith("./")
 
 
@@ -121,9 +170,12 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
             continue
         for m in _SPAN_RE.finditer(line):
             token = (m.group(1) or m.group(2) or "").strip()
+            planned = token.startswith(PLANNED_PREFIX)
+            if planned:
+                token = token[len(PLANNED_PREFIX):].strip()
             if not token or _token_ignored(token):
                 continue
-            if not _looks_like_code(token, rule.min_length):
+            if not planned and not _looks_like_code(token, rule.min_length):
                 continue
             doc_dir = doc.rsplit("/", 1)[0] if "/" in doc else ""
             anchors.append(
@@ -133,9 +185,31 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
                     token=token,
                     path_like=_is_path_like(token),
                     doc_dir=doc_dir,
+                    planned=planned,
                 )
             )
     return anchors
+
+
+_BRACE_GROUP_RE = re.compile(r"\{([^{}]*,[^{}]*)\}")
+
+
+def expand_braces(token: str) -> list[str]:
+    """Shell-style brace expansion: `bridge/{diag,logger}.cjs` -> both members.
+
+    Docs use this shorthand constantly and each member is a real path claim,
+    so verification expands before resolving and reports only the members
+    that are missing. A brace without a comma (`{directive}` notation) is
+    not a set and stays literal.
+    """
+    m = _BRACE_GROUP_RE.search(token)
+    if not m:
+        return [token]
+    head, tail = token[: m.start()], token[m.end():]
+    out: list[str] = []
+    for part in m.group(1).split(","):
+        out.extend(expand_braces(head + part.strip() + tail))
+    return out
 
 
 def _normalize_path_token(token: str) -> str:
@@ -221,6 +295,20 @@ class CodeIndex:
     def contains(self, token: str) -> bool:
         return token in self._load()
 
+    def locate(self, token: str) -> str | None:
+        """The first file containing the token — evidence for a hint, so a
+        finding can say where a pair-missing identifier actually lives."""
+        if token not in self._load():
+            return None
+        for rel in self._files:
+            try:
+                text = (self._repo_root / rel).read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if token in text:
+                return rel
+        return None
+
 
 def verify(
     repo_root: Path,
@@ -233,6 +321,7 @@ def verify(
     path_roots: list[str] | None = None,
     check_ignored: Callable[[list[str]], set[str]] | None = None,
     branch_prefixes: list[str] | None = None,
+    skipped: list[SkippedToken] | None = None,
 ) -> list[AnchorFinding]:
     """Findings for anchors that no longer resolve.
 
@@ -254,6 +343,9 @@ def verify(
     - a dotted identifier (`anchors.include_fenced` config notation) passes
       when its final segment resolves, so doc-side key paths don't need to
       exist verbatim in code
+    - prose slash constructions (`min/max` — see _prose_like) are declined
+      rather than judged; each decline is recorded in `skipped` so the
+      caller can keep the count visible
     """
     findings: list[AnchorFinding] = []
     basenames: set[str] | None = None
@@ -266,6 +358,24 @@ def verify(
 
     for anchor in anchors:
         token = anchor.token
+        if anchor.planned:
+            # a declared not-built-yet reference: never red, never silent —
+            # pending markers report as their own class every run, and a
+            # marker whose path has landed is flagged so it cannot rot in
+            # place as a stale exemption
+            landed = _path_exists(
+                token, all_files, all_dirs, path_roots, anchor.doc_dir
+            ) or _ignored(token, anchor.doc_dir)
+            findings.append(
+                AnchorFinding(
+                    doc=doc,
+                    line=anchor.line,
+                    token=token,
+                    scope="repo",
+                    planned="resolved" if landed else "pending",
+                )
+            )
+            continue
         if "::" in token and "." in token.partition("::")[0]:
             # `path::symbol` (or `file.py::symbol`): resolve the file, then
             # grep the symbol inside that one file. A gitignored path passes
@@ -284,20 +394,33 @@ def verify(
                 )
             continue
         if anchor.path_like:
-            if _path_exists(
-                token, all_files, all_dirs, path_roots, anchor.doc_dir
-            ) or _ignored(token, anchor.doc_dir):
-                continue
-            # a slash token whose first segment is a branch prefix and which
-            # resolves to no tracked path is a quoted branch name, not a
-            # rotted path (`feature/dark-mode`); a real tracked path with
-            # that prefix already passed above
-            first_seg = token.strip("/").split("/", 1)[0]
-            if branch_prefixes and first_seg in branch_prefixes:
-                continue
-            findings.append(
-                AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
-            )
+            # brace shorthand names several paths in one token — each member
+            # verifies on its own, and only the missing ones are reported
+            for member in expand_braces(token):
+                if _path_exists(
+                    member, all_files, all_dirs, path_roots, anchor.doc_dir
+                ) or _ignored(member, anchor.doc_dir):
+                    continue
+                # a slash token whose first segment is a branch prefix and
+                # which resolves to no tracked path is a quoted branch name,
+                # not a rotted path (`feature/dark-mode`); a real tracked
+                # path with that prefix already passed above
+                first_seg = member.strip("/").split("/", 1)[0]
+                if branch_prefixes and first_seg in branch_prefixes:
+                    continue
+                # prose slash constructions are declined, not judged —
+                # and the decline is counted, never silent
+                if _prose_like(member, all_dirs, path_roots):
+                    if skipped is not None:
+                        skipped.append(
+                            SkippedToken(
+                                doc=doc, line=anchor.line, token=member, reason="prose"
+                            )
+                        )
+                    continue
+                findings.append(
+                    AnchorFinding(doc=doc, line=anchor.line, token=member, scope="repo")
+                )
             continue
         if _path_exists(token, all_files, all_dirs, path_roots, anchor.doc_dir):
             continue
@@ -315,14 +438,29 @@ def verify(
         bare = _bare(token)
         if bare != token and len(bare) >= 2 and index.contains(bare):
             continue
+        tail = ""
         if "." in bare:
             tail = bare.rsplit(".", 1)[-1]
             if len(tail) >= 2 and index.contains(tail):
                 continue
         if _ignored(token, anchor.doc_dir):
             continue
+        hint = ""
+        if scope == "pair":
+            # the pair miss stays red (a same-named survivor elsewhere must
+            # never soften a rename signal) but the finding names where the
+            # identifier actually lives, so cross-pair reference vs true
+            # rot is decidable without a manual grep
+            for cand in (token, bare if len(bare) >= 2 else "", tail if len(tail) >= 2 else ""):
+                rel = repo_index.locate(cand) if cand else None
+                if rel is not None:
+                    hint = (
+                        f"exists in {rel} — cross-pair reference? widen the "
+                        "pair's code, or quote the path instead"
+                    )
+                    break
         findings.append(
-            AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope)
+            AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope, hint=hint)
         )
     return findings
 

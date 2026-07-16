@@ -1,13 +1,13 @@
 {
   "ack": {
-    "at": "2026-07-15T20:24:55+00:00",
+    "at": "2026-07-16T07:56:01+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "7cb911f027ae8b69dd1be92049b62d5705c53e65",
-      "src/staledocs/config.py": "7d0ad1dcba905eb70c023579f6f15c3af95b9681"
+      "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
+      "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af"
     },
-    "commit": "f6072614f0cb7e762ded4c46d91c7997a6c31f89",
-    "doc_blob": "d207161d2b9ab5d7fbf4a80fc925c8dc6502f7a9",
-    "note": "setup README.md untouched in substance; pair amber from cli.py motion only, onboarding flow wording still accurate"
+    "commit": "56a4e46b85f99e65fad59034b77363a8ecbca778",
+    "doc_blob": "e72e2a5726e97a9982f41bde266b9011415b11dd",
+    "note": "docs/setup/README.md triage table now routes planned references to the planned: marker and adds the accurate-history bucket"
   },
   "doc": "docs/setup/README.md",
   "schema": 1

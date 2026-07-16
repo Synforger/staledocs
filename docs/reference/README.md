@@ -6,11 +6,12 @@
 |---|---|---|---|
 | `version` | int | — (required) | config schema version, currently `1` |
 | `gate` | `warn` \| `strict` | `warn` | `strict` exits non-zero when red findings exist |
-| `source.include` | globs | — (required) | files subject to pairing and the coverage gate |
+| `source.include` | globs | — (required) | files subject to pairing and the coverage gate; a file that also matches the docs scope classifies as a doc, never as source (no double-counted coverage red) |
 | `source.exclude` | globs | `[]` | carve-outs (vendored, generated) |
 | `docs.include` | globs | `docs/**/*.md`, `README.md` | files treated as docs |
 | `docs.exclude` | globs | `[]` | |
 | `pairs[].doc` | path | | literal doc path (one entry per doc) |
+| `pairs[].doc` | path or glob | | the owning doc. A glob expands to one independent pair per matched doc (shared `code` globs, per-doc ledger); exact pairs always win regardless of position, globs pair what remains and never take docs declared `global`/`standalone`; a glob matching nothing is a red mapping finding |
 | `pairs[].code` | globs | | what this doc tracks: source files **or other docs** — pairing a doc to an upstream doc declares a chained-drift link (requirements ↔ design ↔ code), same ledger, same anchor grading; a doc never pairs to itself |
 | `mirror.enabled` | bool | `false` | convention pairing `docs/<x>.md` ↔ `<code_root>/<x>/**` and `<code_root>/<x>.*` |
 | `mirror.docs_root` | path | `docs` | |
@@ -27,14 +28,34 @@
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
 
-Anchor resolution notes: paths that .gitignore rules would ignore pass (docs
-legitimately describe runtime artifacts); markdown-relative references
+Anchor resolution notes: a `planned:` prefix (`` `planned:src/future.py` ``)
+declares a not-built-yet reference — pending markers report as their own
+never-red class every run and are counted in the summary (a declaration,
+not a silencer), and a marker whose path has landed is flagged for removal;
+paths that .gitignore rules would ignore pass (docs
+legitimately describe runtime artifacts); brace shorthand
+(`bridge/{diag,logger}.cjs`) expands shell-style and each member verifies on
+its own — only the missing members are reported (a comma-less `{directive}`
+is not a set and stays literal); markdown-relative references
 (`../<dir>/<page>.md`) resolve against the doc's own directory;
+a package specifier (`@scope/pkg`, subpaths included) is not a repo path —
+it verifies as an identifier against the paired code, which import
+statements quote verbatim (the doc's named dependency must actually be
+used; an unimported or renamed-away package still reds);
 `path::symbol` anchors resolve the file and grep the symbol inside it (a
 gitignored path passes whole); call/assignment/subscript/glob notation falls
 back to the bare identifier (`truncate()`, `viewMode='x'`, `loading[sid]`,
-`system_*`); a slashless glob (`detect-*`) also matches tracked-file
-basenames; tokens starting with `~`, `/`, or `$`, tokens containing `://`,
+`system_*`); an identifier missing from its pair but alive elsewhere in the
+repo stays red (a same-named survivor must never soften a rename signal)
+and the finding names the file it lives in — cross-pair reference vs true
+rot is decidable without a manual grep (widen the pair's code, or quote
+the path instead); a slashless glob (`detect-*`) also matches tracked-file
+basenames; a prose slash construction (`min/max` — two all-lowercase words
+around one slash, no extension, head naming no tracked directory) is
+declined rather than judged, and every decline is counted in the report
+and listed under `skipped_tokens` in `--json` (never a silent blind spot;
+a head that IS a tracked dir keeps full verification, so `src/gone` still
+reds); tokens starting with `~`, `/`, or `$`, tokens containing `://`,
 tokens whose digits outnumber their letters, and `<placeholder>` notation
 are not extracted at all.
 
@@ -133,7 +154,12 @@ confirmation.
   "staledocs": "1.2.0",
   "schema": 1,
   "gate": "warn",
-  "summary": { "red": 2, "amber": 1, "green": 7 },
+  "summary": {
+    "red": 2, "amber": 1, "green": 7,
+    // by finding class — a raw total buries what to fix first
+    "red_breakdown": { "pairs": 1, "anchors": 1, "coverage": 0, "mapping": 0, "config": 0 },
+    "planned": 0                        // pending planned: markers
+  },
   "pairs": [
     {
       "doc": "docs/auth.md",
@@ -161,6 +187,10 @@ confirmation.
   "anchors": [
     { "doc": "docs/auth.md", "line": 12, "token": "issue_token", "scope": "pair" }
   ],
+  "planned": {                          // planned: markers, never red
+    "pending":  [ { "doc": "docs/roadmap.md", "line": 8, "token": "src/future.py", "scope": "repo", "planned": "pending" } ],
+    "resolved": [ ]                     // landed paths — remove the marker
+  },
   "coverage": {
     "unclassified_docs": [], "orphan_pairs": [], "uncovered_source": [],
     "dead_pair_docs": [], "out_of_scope_pair_code": [], "stale_ledger_docs": []
