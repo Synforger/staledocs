@@ -1,23 +1,23 @@
 {
   "ack": {
-    "at": "2026-07-16T08:14:32+00:00",
+    "at": "2026-07-16T08:19:58+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
       "src/staledocs/anchors.py": "7e5d625428edc4b58b03c9d91f8a9f155a0af0b3",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
-      "src/staledocs/engine.py": "8bbfaf70913546e63b3d8988f958f1831a8b9430",
+      "src/staledocs/engine.py": "8562b8f2719a75ea062237414cc53f6046692a64",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
       "src/staledocs/gitio.py": "477c74d4351b9ba199ba4b57fb32675d6e8a8aed",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
-      "src/staledocs/mapping.py": "0e27bcd0e7f2752db623fb5f65fda2fd45d8980e",
-      "src/staledocs/report.py": "2d3656fe1434f34ccfe93698a9c4ecd83cdeeadd",
+      "src/staledocs/mapping.py": "1cbe8595bb1d7bd4567f44da6294cba9fec81a5f",
+      "src/staledocs/report.py": "49f22e112b6e9473f18874a33261390a796cea03",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "37e60a6425f68d071be237609b46bf78d671e5a6",
-    "doc_blob": "bf651ae96190ca100dde1fdfcb8f5729c96c8102",
-    "note": "docs/reference/README.md resolution notes now document package-specifier identifier verification from anchors.py"
+    "commit": "369dfa37f5ded19120a1a9a6791edde4f8f7cec3",
+    "doc_blob": "ec2e96dd0d4413a7fff49f0a7e5da9f374a5148e",
+    "note": "docs/reference/README.md config table gains the pairs[].doc glob row implemented in mapping.py"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

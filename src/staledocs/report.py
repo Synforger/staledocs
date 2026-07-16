@@ -42,6 +42,13 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
 
     for doc in result.dead_pair_docs:
         lines.append(red(f"[mapping] pair doc does not exist: {doc}"))
+    for pattern in result.glob_pair_no_match:
+        lines.append(
+            red(
+                "[mapping] pair doc glob matches no doc "
+                f"(fix the glob, or drop the pair): {pattern}"
+            )
+        )
     for entry in result.out_of_scope_pair_code:
         lines.append(
             red(
@@ -228,6 +235,7 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "orphan_pairs": result.orphan_pairs,
             "uncovered_source": result.uncovered_source,
             "dead_pair_docs": result.dead_pair_docs,
+            "glob_pair_no_match": result.glob_pair_no_match,
             "out_of_scope_pair_code": result.out_of_scope_pair_code,
             "stale_ledger_docs": result.stale_ledger_docs,
         },

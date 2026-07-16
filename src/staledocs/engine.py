@@ -75,6 +75,7 @@ class CheckResult:
     orphan_pairs: list[str] = field(default_factory=list)
     uncovered_source: list[str] = field(default_factory=list)
     dead_pair_docs: list[str] = field(default_factory=list)
+    glob_pair_no_match: list[str] = field(default_factory=list)
     out_of_scope_pair_code: list[str] = field(default_factory=list)
     stale_ledger_docs: list[str] = field(default_factory=list)
     config_weakenings: list[str] = field(default_factory=list)
@@ -100,7 +101,11 @@ class CheckResult:
                 + len(self.orphan_pairs)
                 + len(self.uncovered_source)
             ),
-            "mapping": len(self.dead_pair_docs) + len(self.out_of_scope_pair_code),
+            "mapping": (
+                len(self.dead_pair_docs)
+                + len(self.glob_pair_no_match)
+                + len(self.out_of_scope_pair_code)
+            ),
             "config": len(self.config_weakenings),
         }
 
@@ -390,6 +395,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
         orphan_pairs=mapping.orphan_pairs,
         uncovered_source=mapping.uncovered_source,
         dead_pair_docs=mapping.dead_pair_docs,
+        glob_pair_no_match=mapping.glob_pair_no_match,
         out_of_scope_pair_code=mapping.out_of_scope_pair_code,
     )
 
