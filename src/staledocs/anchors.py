@@ -138,6 +138,27 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
     return anchors
 
 
+_BRACE_GROUP_RE = re.compile(r"\{([^{}]*,[^{}]*)\}")
+
+
+def expand_braces(token: str) -> list[str]:
+    """Shell-style brace expansion: `bridge/{diag,logger}.cjs` -> both members.
+
+    Docs use this shorthand constantly and each member is a real path claim,
+    so verification expands before resolving and reports only the members
+    that are missing. A brace without a comma (`{directive}` notation) is
+    not a set and stays literal.
+    """
+    m = _BRACE_GROUP_RE.search(token)
+    if not m:
+        return [token]
+    head, tail = token[: m.start()], token[m.end():]
+    out: list[str] = []
+    for part in m.group(1).split(","):
+        out.extend(expand_braces(head + part.strip() + tail))
+    return out
+
+
 def _normalize_path_token(token: str) -> str:
     token = token.strip()
     for prefix in ("./",):
@@ -284,20 +305,23 @@ def verify(
                 )
             continue
         if anchor.path_like:
-            if _path_exists(
-                token, all_files, all_dirs, path_roots, anchor.doc_dir
-            ) or _ignored(token, anchor.doc_dir):
-                continue
-            # a slash token whose first segment is a branch prefix and which
-            # resolves to no tracked path is a quoted branch name, not a
-            # rotted path (`feature/dark-mode`); a real tracked path with
-            # that prefix already passed above
-            first_seg = token.strip("/").split("/", 1)[0]
-            if branch_prefixes and first_seg in branch_prefixes:
-                continue
-            findings.append(
-                AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
-            )
+            # brace shorthand names several paths in one token — each member
+            # verifies on its own, and only the missing ones are reported
+            for member in expand_braces(token):
+                if _path_exists(
+                    member, all_files, all_dirs, path_roots, anchor.doc_dir
+                ) or _ignored(member, anchor.doc_dir):
+                    continue
+                # a slash token whose first segment is a branch prefix and
+                # which resolves to no tracked path is a quoted branch name,
+                # not a rotted path (`feature/dark-mode`); a real tracked
+                # path with that prefix already passed above
+                first_seg = member.strip("/").split("/", 1)[0]
+                if branch_prefixes and first_seg in branch_prefixes:
+                    continue
+                findings.append(
+                    AnchorFinding(doc=doc, line=anchor.line, token=member, scope="repo")
+                )
             continue
         if _path_exists(token, all_files, all_dirs, path_roots, anchor.doc_dir):
             continue

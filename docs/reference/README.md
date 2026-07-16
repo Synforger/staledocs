@@ -28,7 +28,10 @@ Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
 
 Anchor resolution notes: paths that .gitignore rules would ignore pass (docs
-legitimately describe runtime artifacts); markdown-relative references
+legitimately describe runtime artifacts); brace shorthand
+(`bridge/{diag,logger}.cjs`) expands shell-style and each member verifies on
+its own — only the missing members are reported (a comma-less `{directive}`
+is not a set and stays literal); markdown-relative references
 (`../<dir>/<page>.md`) resolve against the doc's own directory;
 `path::symbol` anchors resolve the file and grep the symbol inside it (a
 gitignored path passes whole); call/assignment/subscript/glob notation falls
