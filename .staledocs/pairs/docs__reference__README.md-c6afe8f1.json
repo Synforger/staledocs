@@ -1,9 +1,9 @@
 {
   "ack": {
-    "at": "2026-07-16T08:10:19+00:00",
+    "at": "2026-07-16T08:14:32+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
-      "src/staledocs/anchors.py": "6142b85e463295c161c868229a8b45af8f3f687d",
+      "src/staledocs/anchors.py": "7e5d625428edc4b58b03c9d91f8a9f155a0af0b3",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
       "src/staledocs/engine.py": "8bbfaf70913546e63b3d8988f958f1831a8b9430",
@@ -15,9 +15,9 @@
       "src/staledocs/report.py": "2d3656fe1434f34ccfe93698a9c4ecd83cdeeadd",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "4bcdeab7ada149222da708b67ece39bbb4da8f16",
-    "doc_blob": "5179855b3bd8d8957971f8f99b5a68d0067a712f",
-    "note": "docs/reference/README.md resolution notes now document the prose-skip decline implemented in anchors.py"
+    "commit": "37e60a6425f68d071be237609b46bf78d671e5a6",
+    "doc_blob": "bf651ae96190ca100dde1fdfcb8f5729c96c8102",
+    "note": "docs/reference/README.md resolution notes now document package-specifier identifier verification from anchors.py"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

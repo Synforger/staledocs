@@ -37,6 +37,10 @@ legitimately describe runtime artifacts); brace shorthand
 its own — only the missing members are reported (a comma-less `{directive}`
 is not a set and stays literal); markdown-relative references
 (`../<dir>/<page>.md`) resolve against the doc's own directory;
+a package specifier (`@scope/pkg`, subpaths included) is not a repo path —
+it verifies as an identifier against the paired code, which import
+statements quote verbatim (the doc's named dependency must actually be
+used; an unimported or renamed-away package still reds);
 `path::symbol` anchors resolve the file and grep the symbol inside it (a
 gitignored path passes whole); call/assignment/subscript/glob notation falls
 back to the bare identifier (`truncate()`, `viewMode='x'`, `loading[sid]`,
