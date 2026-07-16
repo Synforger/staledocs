@@ -226,7 +226,9 @@ def render_evidence(evidence: dict, color: bool | None = None) -> str:
 def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
     payload = {
         "staledocs": __version__,
-        "schema": 1,
+        # 2 = baseline-resolved anchors: skipped_tokens removed, anchor_status
+        # added, anchor reds mean an armed claim stopped resolving
+        "schema": 2,
         "gate": gate,
         "summary": {
             "red": result.red_count(),

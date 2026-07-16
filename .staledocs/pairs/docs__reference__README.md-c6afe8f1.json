@@ -7,6 +7,7 @@
       "--json",
       "--suggest",
       ".staledocs.yaml",
+      ".staledocs/anchors/",
       ".staledocs/config-ack.json",
       ".staledocs/pairs/",
       "@scope/pkg",
@@ -46,9 +47,9 @@
       "uncovered_source",
       "viewMode='x'"
     ],
-    "at": "2026-07-16T09:28:31+00:00",
+    "at": "2026-07-16T12:44:07+00:00",
     "code_blobs": {
-      "src/staledocs/__init__.py": "b44f6a24851c8dc8f16f9ecd7ad3da328a315e36",
+      "src/staledocs/__init__.py": "fdc842e01853032b615e5fdd753768830e0f902e",
       "src/staledocs/anchors.py": "fd363d7f69592257c32de3103010ef362cfaa24c",
       "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
@@ -58,12 +59,12 @@
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "624a59c266807f2c7fdecb6447af8c79dfd7d621",
       "src/staledocs/mapping.py": "1cbe8595bb1d7bd4567f44da6294cba9fec81a5f",
-      "src/staledocs/report.py": "efafbe1e6f450418d5a59cc3f4dc07fab7d82e49",
+      "src/staledocs/report.py": "2872daa981620ff290ca56f43ed8f58b0a0c28f6",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "eefea0b85b1a523d743aa9fbcd6a2d74c36d23dd",
-    "doc_blob": "09318490e8380f43a781dd9ac78668f7ab60772d",
-    "note": "docs/reference/README.md rewritten for baseline-resolved anchors in anchors.py (record/verify, suffix, anchor_status)"
+    "commit": "64a21e94b0ccd7affe47721c3f88a10190babdba",
+    "doc_blob": "5c5ab2292a88b1151570755c51e63cfb7de3b1c6",
+    "note": "docs/reference/README.md documents schema 2, trailer-ack anchor-baseline boundary, tracked+untracked resolution"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
