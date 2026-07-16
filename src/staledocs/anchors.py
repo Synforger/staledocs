@@ -28,6 +28,12 @@ _NUMBERLIKE_RE = re.compile(r"^[\d\s.,:%+\-*/=<>()]+$")
 _CODE_PUNCT = set("_./:-()[]<>=$@")
 
 
+# a doc declares a not-built-yet reference as `planned:path/to/thing`.
+# Declaration, not silence: pending markers stay visible as their own class
+# in every report, and a marker whose path has landed is flagged for removal
+PLANNED_PREFIX = "planned:"
+
+
 @dataclass
 class Anchor:
     doc: str
@@ -35,6 +41,7 @@ class Anchor:
     token: str
     path_like: bool
     doc_dir: str = ""
+    planned: bool = False
 
 
 @dataclass
@@ -43,6 +50,7 @@ class AnchorFinding:
     line: int
     token: str
     scope: str  # "pair" | "repo"
+    planned: str = ""  # "" (a normal finding) | "pending" | "resolved"
 
 
 def _looks_like_code(token: str, min_length: int) -> bool:
@@ -121,9 +129,12 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
             continue
         for m in _SPAN_RE.finditer(line):
             token = (m.group(1) or m.group(2) or "").strip()
+            planned = token.startswith(PLANNED_PREFIX)
+            if planned:
+                token = token[len(PLANNED_PREFIX):].strip()
             if not token or _token_ignored(token):
                 continue
-            if not _looks_like_code(token, rule.min_length):
+            if not planned and not _looks_like_code(token, rule.min_length):
                 continue
             doc_dir = doc.rsplit("/", 1)[0] if "/" in doc else ""
             anchors.append(
@@ -133,6 +144,7 @@ def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
                     token=token,
                     path_like=_is_path_like(token),
                     doc_dir=doc_dir,
+                    planned=planned,
                 )
             )
     return anchors
@@ -287,6 +299,24 @@ def verify(
 
     for anchor in anchors:
         token = anchor.token
+        if anchor.planned:
+            # a declared not-built-yet reference: never red, never silent —
+            # pending markers report as their own class every run, and a
+            # marker whose path has landed is flagged so it cannot rot in
+            # place as a stale exemption
+            landed = _path_exists(
+                token, all_files, all_dirs, path_roots, anchor.doc_dir
+            ) or _ignored(token, anchor.doc_dir)
+            findings.append(
+                AnchorFinding(
+                    doc=doc,
+                    line=anchor.line,
+                    token=token,
+                    scope="repo",
+                    planned="resolved" if landed else "pending",
+                )
+            )
+            continue
         if "::" in token and "." in token.partition("::")[0]:
             # `path::symbol` (or `file.py::symbol`): resolve the file, then
             # grep the symbol inside that one file. A gitignored path passes

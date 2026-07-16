@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-16T07:42:38+00:00",
+    "at": "2026-07-16T07:56:01+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "b1decc08e269509ff52cab5ec0eed763e6fdc596",
+      "docs/reference/README.md": "05e3c6de4bec0987a3fdc17c5dc94f189249c049",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
-      "src/staledocs/engine.py": "95c7f52dd3ddb25a4a9e754587d443a62063cc84",
-      "src/staledocs/report.py": "f5723e8a85b4abbc08cc62a0826261697ac8e2b3"
+      "src/staledocs/engine.py": "1767c108a137113dec07ca39c83616265e45e723",
+      "src/staledocs/report.py": "06af9bc648977e071fcae5cb3077aaf3cca78f17"
     },
-    "commit": "8065d4295a80502597bb7b897d8ca4b852b1ca36",
+    "commit": "56a4e46b85f99e65fad59034b77363a8ecbca778",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "report.py summary change is additive; agent flow table (uncovered_source guidance) still accurate"
+    "note": "report.py planned streams are additive to the JSON the agent flow reads; docs/agent-integration.md flow unchanged"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

@@ -106,13 +106,23 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
         lines.append(red(f"[anchor] {f.doc}:{f.line} `{f.token}` not found in {f.scope} scope"))
     if result.anchor_findings:
         # the map is handed out at the moment of stepping, not buried in docs:
-        # a missing anchor is either rot or a reference to something not built
-        # yet, and the two have different correct moves
+        # a missing anchor is rot, a not-built-yet reference, or prose that
+        # accurately records a removal — three different correct moves
         lines.append(
             dim(
-                "      (rotted, or not built yet? rot -> fix the doc; planned -> "
-                "fence it, keep the plan doc out of scope, or anchors.ignore it "
-                "until it lands — triage table: docs/setup)"
+                "      (rot -> fix the doc; not built yet -> declare it "
+                "`planned:<path>`; prose recording a removal is often accurate "
+                "— read the surrounding text before editing. Triage table: "
+                "docs/setup)"
+            )
+        )
+    for f in result.planned_pending:
+        lines.append(yellow(f"[planned] {f.doc}:{f.line} `{f.token}` planned, not built yet"))
+    for f in result.planned_resolved:
+        lines.append(
+            yellow(
+                f"[planned] {f.doc}:{f.line} `{f.token}` has landed — "
+                "remove the planned: marker"
             )
         )
 
@@ -132,6 +142,10 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
     ambers = result.amber_count()
     greens = sum(1 for p in result.pairs if p.state == GREEN)
     summary = f"staledocs: {reds} red, {ambers} amber, {greens} green pairs"
+    # always counted, so an accumulating pile of planned markers stays visible
+    pending = len(result.planned_pending)
+    if pending or result.planned_resolved:
+        summary += f", {pending} planned"
     if reds:
         # by class, so a big total is actionable: anchor reds fix docs,
         # coverage reds fix pairing, mapping/config reds fix the config
@@ -190,9 +204,14 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "red_breakdown": result.red_breakdown(),
             "amber": result.amber_count(),
             "green": sum(1 for p in result.pairs if p.state == GREEN),
+            "planned": len(result.planned_pending),
         },
         "pairs": [asdict(p) for p in result.pairs],
         "anchors": [asdict(a) for a in result.anchor_findings],
+        "planned": {
+            "pending": [asdict(a) for a in result.planned_pending],
+            "resolved": [asdict(a) for a in result.planned_resolved],
+        },
         "coverage": {
             "unclassified_docs": result.unclassified_docs,
             "orphan_pairs": result.orphan_pairs,

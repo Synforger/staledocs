@@ -80,6 +80,11 @@ class CheckResult:
     config_weakenings: list[str] = field(default_factory=list)
     config_baseline_missing: bool = False
     examples: object | None = None  # ExamplesReport when the layer is on
+    # `planned:` markers — declared not-built-yet references: pending ones
+    # report every run (a declaration, not a silencer), resolved ones flag
+    # the marker for removal
+    planned_pending: list[AnchorFinding] = field(default_factory=list)
+    planned_resolved: list[AnchorFinding] = field(default_factory=list)
 
     def red_breakdown(self) -> dict[str, int]:
         """Red counts by finding class — a raw total buries what to fix
@@ -473,6 +478,12 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                     cfg.anchors.branch_prefixes,
                 )
             )
+
+    # planned markers travel through verify() with the ordinary anchors,
+    # then split into their own never-red streams
+    result.planned_pending = [f for f in result.anchor_findings if f.planned == "pending"]
+    result.planned_resolved = [f for f in result.anchor_findings if f.planned == "resolved"]
+    result.anchor_findings = [f for f in result.anchor_findings if not f.planned]
 
     _ = all_files  # reserved for future scope tuning
     return result

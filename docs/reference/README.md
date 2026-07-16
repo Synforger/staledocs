@@ -27,7 +27,11 @@
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
 
-Anchor resolution notes: paths that .gitignore rules would ignore pass (docs
+Anchor resolution notes: a `planned:` prefix (`` `planned:src/future.py` ``)
+declares a not-built-yet reference — pending markers report as their own
+never-red class every run and are counted in the summary (a declaration,
+not a silencer), and a marker whose path has landed is flagged for removal;
+paths that .gitignore rules would ignore pass (docs
 legitimately describe runtime artifacts); brace shorthand
 (`bridge/{diag,logger}.cjs`) expands shell-style and each member verifies on
 its own — only the missing members are reported (a comma-less `{directive}`
@@ -139,7 +143,8 @@ confirmation.
   "summary": {
     "red": 2, "amber": 1, "green": 7,
     // by finding class — a raw total buries what to fix first
-    "red_breakdown": { "pairs": 1, "anchors": 1, "coverage": 0, "mapping": 0, "config": 0 }
+    "red_breakdown": { "pairs": 1, "anchors": 1, "coverage": 0, "mapping": 0, "config": 0 },
+    "planned": 0                        // pending planned: markers
   },
   "pairs": [
     {
@@ -168,6 +173,10 @@ confirmation.
   "anchors": [
     { "doc": "docs/auth.md", "line": 12, "token": "issue_token", "scope": "pair" }
   ],
+  "planned": {                          // planned: markers, never red
+    "pending":  [ { "doc": "docs/roadmap.md", "line": 8, "token": "src/future.py", "scope": "repo", "planned": "pending" } ],
+    "resolved": [ ]                     // landed paths — remove the marker
+  },
   "coverage": {
     "unclassified_docs": [], "orphan_pairs": [], "uncovered_source": [],
     "dead_pair_docs": [], "out_of_scope_pair_code": [], "stale_ledger_docs": []

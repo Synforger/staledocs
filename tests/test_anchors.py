@@ -393,3 +393,20 @@ def test_brace_without_comma_stays_literal(tmp_path: Path):
 def test_expand_braces_multiple_groups():
     got = anchors.expand_braces("a/{x,y}/b.{md,py}")
     assert got == ["a/x/b.md", "a/x/b.py", "a/y/b.md", "a/y/b.py"]
+
+
+def test_planned_marker_pending_and_resolved(tmp_path: Path):
+    text = "Will land in `planned:src/future.py`; already here: `planned:src/real.py`.\n"
+    found = anchors.extract("d.md", text, RULE)
+    assert [(a.token, a.planned) for a in found] == [
+        ("src/future.py", True),
+        ("src/real.py", True),
+    ]
+    files = {"src/real.py"}
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []), files, anchors.dirs_of(files)
+    )
+    assert [(f.token, f.planned) for f in findings] == [
+        ("src/future.py", "pending"),
+        ("src/real.py", "resolved"),
+    ]

@@ -62,7 +62,7 @@ gets the tool uninstalled.
 A brownfield first run on a real repo prints dozens of findings. That is
 the tool being honest, not broken — but each finding needs a verdict, and
 warn mode left to rot means nobody reads the report again. Sort every
-finding into one of four buckets; each has exactly one correct move:
+finding into one of these buckets; each has exactly one correct move:
 
 | what the finding is | how to tell | the move |
 |---|---|---|
@@ -70,7 +70,8 @@ finding into one of four buckets; each has exactly one correct move:
 | not-an-identifier quote | git branch names, config-example snippets, tokens for another machine (`~/...`, other-repo paths) | `anchors.ignore` — one entry per token or a glob for a family, with a comment saying what it is |
 | scope gap | coverage/mapping findings: unclassified doc, uncovered source, pair code outside scope | widen `include`, or declare `standalone`/`global` — never shrink the source scope to silence it |
 | undeclared pair | a doc that clearly owns code but was never paired | add the pair, then two-step ack it |
-| planned reference | a plan/roadmap doc quotes a path or identifier that does not exist *yet* | put planned layouts in fenced code blocks (fences are not extracted by default), keep plan docs out of the docs scope entirely, or `anchors.ignore` the token until it lands — whichever matches how long the plan lives |
+| planned reference | a plan/roadmap doc quotes a path or identifier that does not exist *yet* | declare it: `` `planned:src/future.py` `` — pending markers report as their own never-red class every run, and once the path lands the marker is flagged for removal. Fenced code blocks / `anchors.ignore` remain alternatives for whole planned layouts |
+| accurate history | the prose around the red *says* the path was removed ("old X retired", "superseded by Y") | leave the doc alone — it is correct. Read the surrounding text before editing any anchor red; "fixing" these deletes accurate history |
 
 Rules of thumb while sorting:
 
