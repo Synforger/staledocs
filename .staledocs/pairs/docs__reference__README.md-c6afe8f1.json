@@ -1,23 +1,23 @@
 {
   "ack": {
-    "at": "2026-07-16T07:56:01+00:00",
+    "at": "2026-07-16T08:10:19+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
-      "src/staledocs/anchors.py": "da9b4813b5c83fb80d71a1db2e36edcea5c56594",
+      "src/staledocs/anchors.py": "6142b85e463295c161c868229a8b45af8f3f687d",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
-      "src/staledocs/engine.py": "1767c108a137113dec07ca39c83616265e45e723",
+      "src/staledocs/engine.py": "8bbfaf70913546e63b3d8988f958f1831a8b9430",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
       "src/staledocs/gitio.py": "477c74d4351b9ba199ba4b57fb32675d6e8a8aed",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
       "src/staledocs/mapping.py": "0e27bcd0e7f2752db623fb5f65fda2fd45d8980e",
-      "src/staledocs/report.py": "06af9bc648977e071fcae5cb3077aaf3cca78f17",
+      "src/staledocs/report.py": "2d3656fe1434f34ccfe93698a9c4ecd83cdeeadd",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "56a4e46b85f99e65fad59034b77363a8ecbca778",
-    "doc_blob": "05e3c6de4bec0987a3fdc17c5dc94f189249c049",
-    "note": "docs/reference/README.md resolution notes + JSON contract now document the planned: marker in anchors.py"
+    "commit": "4bcdeab7ada149222da708b67ece39bbb4da8f16",
+    "doc_blob": "5179855b3bd8d8957971f8f99b5a68d0067a712f",
+    "note": "docs/reference/README.md resolution notes now document the prose-skip decline implemented in anchors.py"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

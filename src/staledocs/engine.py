@@ -85,6 +85,9 @@ class CheckResult:
     # the marker for removal
     planned_pending: list[AnchorFinding] = field(default_factory=list)
     planned_resolved: list[AnchorFinding] = field(default_factory=list)
+    # tokens verification declined to judge (prose slash constructions) —
+    # the count stays visible so the decline can never hide real rot silently
+    skipped_tokens: list[anchors_mod.SkippedToken] = field(default_factory=list)
 
     def red_breakdown(self) -> dict[str, int]:
         """Red counts by finding class — a raw total buries what to fix
@@ -448,6 +451,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                 cfg.anchors.path_roots,
                 check_ignored,
                 cfg.anchors.branch_prefixes,
+                skipped=result.skipped_tokens,
             )
         )
 
@@ -476,6 +480,7 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
                     cfg.anchors.path_roots,
                     check_ignored,
                     cfg.anchors.branch_prefixes,
+                    skipped=result.skipped_tokens,
                 )
             )
 

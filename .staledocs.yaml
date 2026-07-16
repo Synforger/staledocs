@@ -40,6 +40,8 @@ anchors:
     - "research/*"
     # brace-expansion example quoted in the reference's resolution notes
     - "bridge/*.cjs"
+    # prose-skip counterexample quoted in the reference's resolution notes
+    - "src/gone"
     # git branch patterns quoted in docs/internals/branch-protection.md —
     # slash syntax without being repo paths
     - "*/[dm][ea][vi][!o]*"

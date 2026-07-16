@@ -410,3 +410,46 @@ def test_planned_marker_pending_and_resolved(tmp_path: Path):
         ("src/future.py", "pending"),
         ("src/real.py", "resolved"),
     ]
+
+
+def test_prose_slash_construction_is_skipped_and_counted(tmp_path: Path):
+    text = "Clamp to `min/max` values; see `src/gone.py`.\n"
+    found = anchors.extract("d.md", text, RULE)
+    files = {"src/real.py"}
+    skipped: list = []
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), skipped=skipped,
+    )
+    # the prose token is declined, the real rot still reds
+    assert [f.token for f in findings] == ["src/gone.py"]
+    assert [(s.token, s.reason) for s in skipped] == [("min/max", "prose")]
+
+
+def test_prose_shape_with_tracked_head_dir_stays_verified(tmp_path: Path):
+    # `src/auth` missing its tail is rot, not prose — the head names a
+    # tracked directory, so full verification applies
+    found = anchors.extract("d.md", "Lives in `src/gone`.\n", RULE)
+    files = {"src/real.py"}
+    skipped: list = []
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), skipped=skipped,
+    )
+    assert [f.token for f in findings] == ["src/gone"]
+    assert skipped == []
+
+
+def test_prose_skip_requires_pure_lowercase_words(tmp_path: Path):
+    # an extension, an uppercase letter, or a digit keeps verification on
+    files = {"src/real.py"}
+    skipped: list = []
+    found = anchors.extract(
+        "d.md", "See `gone/file.py` and `Gone/dir` and `v2/api`.\n", RULE
+    )
+    findings = anchors.verify(
+        tmp_path, "d.md", found, None, CodeIndex(tmp_path, []),
+        files, anchors.dirs_of(files), skipped=skipped,
+    )
+    assert [f.token for f in findings] == ["gone/file.py", "Gone/dir", "v2/api"]
+    assert skipped == []
