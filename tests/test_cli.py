@@ -526,3 +526,16 @@ def test_init_proposes_frozen_docs_exclusions(repo):
     assert '"docs/archive/**"' in proc.stdout
     # proposal only — the scaffold config must not pre-apply the exclusion
     assert "docs/archive" not in (repo.root / ".staledocs.yaml").read_text()
+
+
+def test_red_breakdown_in_summary(paired_repo):
+    # one UNACKED pair (pairs class) + one dead anchor (anchors class)
+    paired_repo.write("docs/auth.md", "# Auth\n\nUses `src/auth/gone.py`.\n")
+    paired_repo.commit("rot the doc")
+    proc = _run(paired_repo.root, "check", "--json")
+    breakdown = json.loads(proc.stdout)["summary"]["red_breakdown"]
+    assert breakdown["pairs"] == 1
+    assert breakdown["anchors"] == 1
+    assert breakdown["coverage"] == 0
+    human = _run(paired_repo.root, "check")
+    assert "(1 pairs, 1 anchors)" in human.stdout

@@ -1,23 +1,23 @@
 {
   "ack": {
-    "at": "2026-07-16T07:39:30+00:00",
+    "at": "2026-07-16T07:42:46+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
       "src/staledocs/anchors.py": "f11176aabd7314c54527fc6364de3f882d34c285",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
-      "src/staledocs/engine.py": "bdab5d50afab7ed1415c06cbb915710a1a4836d0",
+      "src/staledocs/engine.py": "95c7f52dd3ddb25a4a9e754587d443a62063cc84",
       "src/staledocs/examples.py": "122e4ee3767e18a8b71d852af713a61b2c002d1d",
       "src/staledocs/gitio.py": "477c74d4351b9ba199ba4b57fb32675d6e8a8aed",
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
       "src/staledocs/mapping.py": "0e27bcd0e7f2752db623fb5f65fda2fd45d8980e",
-      "src/staledocs/report.py": "de8089a300e166a02db1e6e16c9c447ee66401b8",
+      "src/staledocs/report.py": "f5723e8a85b4abbc08cc62a0826261697ac8e2b3",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "86660a9deda7114203dbdef115b31b12a55236ab",
-    "doc_blob": "6d94e8ec8339b586f87995c63b13226aeefca094",
-    "note": "source.include row now documents doc-over-source precedence implemented in mapping.py resolve"
+    "commit": "8065d4295a80502597bb7b897d8ca4b852b1ca36",
+    "doc_blob": "b1decc08e269509ff52cab5ec0eed763e6fdc596",
+    "note": "docs/reference/README.md JSON example updated for the report.py summary.red_breakdown addition"
   },
   "doc": "docs/reference/README.md",
   "schema": 1
