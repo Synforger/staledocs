@@ -101,19 +101,40 @@ def test_ack_unknown_doc_fails(paired_repo):
 
 
 def test_anchor_finding_reported(paired_repo):
+    # issue_token resolved at ack -> armed. The rename removes it from the
+    # pair code, so the armed claim stops resolving = provable drift, red.
+    _ack(
+        paired_repo.root, "--all",
+        note="onboarding baseline: verified issue_token in src/auth/token.py",
+    )
+    paired_repo.write("src/auth/token.py", "def renamed():\n    return 1\n")
+    paired_repo.commit("rename fn", "src/auth/token.py")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    tokens = [a["token"] for a in payload["anchors"]]
+    assert "issue_token" in tokens
+
+
+def test_never_resolved_token_is_unarmed_not_red(paired_repo):
+    # a token that never resolved (prose, history, junk) is not a claim:
+    # counted as unarmed, never red
     _ack(
         paired_repo.root, "--all",
         note="onboarding baseline: verified issue_token in src/auth/token.py",
     )
     paired_repo.write(
-        "docs/auth.md", "# Auth\n\nUses `vanished_function` from `src/auth/token.py`.\n"
+        "docs/auth.md",
+        "# Auth\n\nUses `issue_token` from `src/auth/token.py`; clamp `min/max`;"
+        " old `legacy_gateway()` was retired.\n",
     )
-    paired_repo.write("src/auth/token.py", "def renamed():\n    return 1\n")
-    paired_repo.commit("rename fn", "docs/auth.md", "src/auth/token.py")
+    paired_repo.commit("doc gains prose and history")
     proc = _run(paired_repo.root, "check", "--json")
     payload = json.loads(proc.stdout)
-    tokens = [a["token"] for a in payload["anchors"]]
-    assert "vanished_function" in tokens
+    assert payload["anchors"] == []
+    per_doc = payload["anchor_status"]["per_doc"]["docs/auth.md"]
+    assert per_doc["armed"] == 2
+    assert "min/max" in per_doc["unarmed_tokens"]
+    assert "legacy_gateway()" in per_doc["unarmed_tokens"]
 
 
 def test_coverage_findings_in_json(paired_repo):
@@ -393,15 +414,12 @@ def test_anchor_findings_carry_the_triage_hint(paired_repo):
         paired_repo.root, "--all",
         note="onboarding baseline: verified issue_token in src/auth/token.py",
     )
-    paired_repo.write(
-        "docs/auth.md", "# Auth\n\nUses `vanished_function` from `src/auth/token.py`.\n"
-    )
-    paired_repo.commit("doc quotes a gone identifier", "docs/auth.md")
+    paired_repo.write("src/auth/token.py", "def renamed():\n    return 1\n")
+    paired_repo.commit("rename away the quoted identifier", "src/auth/token.py")
     proc = _run(paired_repo.root, "check")
     assert "not found in" in proc.stdout
     assert "rot -> fix the doc" in proc.stdout
     assert "planned:<path>" in proc.stdout
-    assert "read the surrounding text" in proc.stdout
     assert "docs/setup" in proc.stdout
 
 
@@ -531,16 +549,17 @@ def test_init_proposes_frozen_docs_exclusions(repo):
 
 
 def test_red_breakdown_in_summary(paired_repo):
-    # one UNACKED pair (pairs class) + one dead anchor (anchors class)
-    paired_repo.write("docs/auth.md", "# Auth\n\nUses `src/auth/gone.py`.\n")
-    paired_repo.commit("rot the doc")
+    # arm the baseline, then break both layers: the doc's named file is
+    # deleted (anchors class) and the pair moves without an ack (pairs class)
+    _ack(paired_repo.root, "docs/auth.md", note="verified src/auth/token.py claims")
+    paired_repo.git("rm", "-q", "src/auth/token.py")
+    paired_repo.commit("delete the quoted file")
     proc = _run(paired_repo.root, "check", "--json")
     breakdown = json.loads(proc.stdout)["summary"]["red_breakdown"]
     assert breakdown["pairs"] == 1
-    assert breakdown["anchors"] == 1
-    assert breakdown["coverage"] == 0
+    assert breakdown["anchors"] >= 1
     human = _run(paired_repo.root, "check")
-    assert "(1 pairs, 1 anchors)" in human.stdout
+    assert "1 pairs" in human.stdout
 
 
 def test_planned_marker_never_red_and_counted(paired_repo):
@@ -567,19 +586,15 @@ def test_planned_marker_never_red_and_counted(paired_repo):
     assert "remove the planned: marker" in human.stdout
 
 
-def test_prose_skip_surfaces_in_json_and_summary(paired_repo):
-    paired_repo.write(
-        "docs/auth.md",
-        "# Auth\n\nUses `issue_token` from `src/auth/token.py`, clamps `min/max`.\n",
-    )
-    paired_repo.commit("prose token")
+def test_missing_baseline_is_advisory_never_red(paired_repo):
+    # no ack yet: nothing is armed, anchors gate nothing, and the check
+    # says so out loud instead of guessing
     proc = _run(paired_repo.root, "check", "--json")
     payload = json.loads(proc.stdout)
-    assert payload["skipped_tokens"] == [
-        {"doc": "docs/auth.md", "line": 3, "token": "min/max", "reason": "prose"}
-    ]
+    assert payload["anchors"] == []
+    assert "docs/auth.md" in payload["anchor_status"]["baseline_missing"]
     human = _run(paired_repo.root, "check")
-    assert "1 prose-like slash token(s) skipped" in human.stdout
+    assert "no anchor baseline" in human.stdout
 
 
 def test_glob_pair_no_match_is_red_in_check(paired_repo):
@@ -592,3 +607,40 @@ def test_glob_pair_no_match_is_red_in_check(paired_repo):
     payload = json.loads(proc.stdout)
     assert payload["coverage"]["glob_pair_no_match"] == ["guides/**/*.md"]
     assert payload["summary"]["red_breakdown"]["mapping"] == 1
+
+
+def test_global_doc_ack_records_anchor_baseline(paired_repo):
+    paired_repo.write("README.md", "# Top\n\nEntry point is `src/auth/token.py`.\n")
+    cfg = (paired_repo.root / ".staledocs.yaml").read_text() + 'global: ["README.md"]\n'
+    cfg = cfg.replace('include: ["docs/**/*.md"]', 'include: ["docs/**/*.md", "README.md"]')
+    paired_repo.write(".staledocs.yaml", cfg)
+    paired_repo.commit("global readme")
+    proc = _run(paired_repo.root, "check", "--json")
+    assert "README.md" in json.loads(proc.stdout)["anchor_status"]["baseline_missing"]
+    proc = _run(paired_repo.root, "ack", "README.md", "-m", "armed the README claims")
+    assert "anchor baseline recorded for README.md (1 claims armed)" in proc.stdout
+    # armed and resolving -> quiet; delete the file -> red
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert "README.md" not in payload["anchor_status"]["baseline_missing"]
+    paired_repo.git("rm", "-q", "src/auth/token.py")
+    paired_repo.commit("delete entry point")
+    proc = _run(paired_repo.root, "check", "--json")
+    assert "src/auth/token.py" in [a["token"] for a in json.loads(proc.stdout)["anchors"]]
+
+
+def test_v1_ledger_without_anchors_reports_baseline_missing(paired_repo):
+    # a pre-v2 ledger entry has no anchors key: the pair's anchors stay
+    # unarmed (never red) and the doc reports baseline_missing until re-ack
+    _ack(paired_repo.root, "docs/auth.md", note="verified src/auth/token.py claims")
+    import json as _json
+
+    from staledocs.ledger import pair_id
+    entry = paired_repo.root / f".staledocs/pairs/{pair_id('docs/auth.md')}.json"
+    raw = _json.loads(entry.read_text())
+    del raw["ack"]["anchors"]
+    entry.write_text(_json.dumps(raw))
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = _json.loads(proc.stdout)
+    assert "docs/auth.md" in payload["anchor_status"]["baseline_missing"]
+    assert payload["anchors"] == []

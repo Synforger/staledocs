@@ -1,15 +1,25 @@
 {
   "ack": {
-    "at": "2026-07-16T08:23:32+00:00",
+    "anchors": [
+      "--broken",
+      "CODE_LAG",
+      "DOC_STALE",
+      "changed_lines",
+      "doc_lines",
+      "hit_anchors",
+      "unclassified_docs",
+      "uncovered_source"
+    ],
+    "at": "2026-07-16T09:28:30+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "3ff41c42571504511d2df1b2fc5e82c938a2a650",
-      "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
-      "src/staledocs/engine.py": "8562b8f2719a75ea062237414cc53f6046692a64",
-      "src/staledocs/report.py": "6e4ed33a74701aa8de9598c7fd5d4922e0de6c01"
+      "docs/reference/README.md": "09318490e8380f43a781dd9ac78668f7ab60772d",
+      "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
+      "src/staledocs/engine.py": "42251fc2e8f82c772eb49166f2bebb1cbf15c957",
+      "src/staledocs/report.py": "efafbe1e6f450418d5a59cc3f4dc07fab7d82e49"
     },
-    "commit": "b7bfe0d56ab8b42521c19399aae053bde476ecf1",
-    "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "docs/agent-integration.md flow unchanged; anchor finding hint is additive JSON"
+    "commit": "eefea0b85b1a523d743aa9fbcd6a2d74c36d23dd",
+    "doc_blob": "425642d6e4b0ac3c7c738d186791d08e9ef88258",
+    "note": "docs/agent-integration.md anchor-finding row now describes armed-claim semantics and the hint field"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

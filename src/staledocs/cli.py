@@ -280,6 +280,19 @@ def ack(
 
     resolved = _resolve(repo_root, cfg)
     by_doc = {p.doc: p for p in resolved.pairs}
+    baseline_only = set(resolved.global_docs) | set(resolved.standalone_docs)
+
+    def _record_baseline(doc: str) -> None:
+        anchors = engine.record_doc_anchors(
+            repo_root,
+            doc,
+            None,
+            cfg,
+            repo_files=resolved.source_files,
+            path_only=doc in resolved.standalone_docs,
+        )
+        ledger.write_anchor_baseline(repo_root, doc, anchors, note=note)
+        click.echo(f"anchor baseline recorded for {doc} ({len(anchors)} claims armed)")
 
     if prune:
         mapped = set(by_doc)
@@ -302,22 +315,33 @@ def ack(
         return reports[doc]
 
     targets: list[str]
+    baseline_targets: list[str] = []
     if ack_all:
         targets = sorted(by_doc)
+        baseline_targets = sorted(baseline_only)
     elif ack_broken:
         targets = sorted(d for d in by_doc if _report(d).state != engine.GREEN)
         if not targets:
             click.echo("no broken pairs — nothing to ack")
             return
     elif docs:
-        targets = [d.strip().removeprefix("./").strip("/") for d in docs]
-        for doc in targets:
-            if doc not in by_doc:
+        requested = [d.strip().removeprefix("./").strip("/") for d in docs]
+        targets = [d for d in requested if d in by_doc]
+        baseline_targets = [d for d in requested if d in baseline_only]
+        for doc in requested:
+            if doc not in by_doc and doc not in baseline_only:
                 raise click.ClickException(
                     f"not a mapped pair doc: {doc} (see `staledocs pairs`)"
                 )
     else:
         raise click.UsageError("name docs to ack, or pass --all / --broken")
+
+    # global/standalone docs have no pair state — their ack is the anchor
+    # baseline recording itself, no two-step needed
+    for doc in baseline_targets:
+        _record_baseline(doc)
+    if not targets:
+        return
 
     green = [d for d in targets if _report(d).state == engine.GREEN]
     pending = [d for d in targets if d not in green]
@@ -373,12 +397,18 @@ def ack(
             )
             click.echo()
         for doc in green:
-            engine.ack_pair(repo_root, by_doc[doc], note=note)
+            engine.ack_pair(
+                repo_root, by_doc[doc], note=note, cfg=cfg,
+                repo_files=resolved.source_files,
+            )
             click.echo(f"acked {doc} (green refresh)")
         sys.exit(3)  # 3 = pending confirmation (2 is click's usage-error code)
 
     for doc in targets:
-        engine.ack_pair(repo_root, by_doc[doc], note=note)
+        engine.ack_pair(
+            repo_root, by_doc[doc], note=note, cfg=cfg,
+            repo_files=resolved.source_files,
+        )
         click.echo(f"acked {doc} ({len(by_doc[doc].code_files)} code files)")
     _refresh_config_baseline(repo_root, cfg)
 

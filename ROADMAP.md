@@ -17,6 +17,14 @@
 
 ## 実装済み (= develop、未 release)
 
+- **baseline 解決型 anchor (v2)**: 「code っぽい token は全部実在すべき」という
+  推定を廃止。ack 時に repo へ解決できた token だけが claim として baseline に
+  記録され、check は「baseline で実在した claim が解決できなくなった」時だけ
+  red を出す (= 証明可能な drift のみ)。解決しない token (prose / flag / 歴史
+  / 将来) は unarmed として計数・列挙され、決して red にならず、決して黙って
+  covered 扱いにもならない。誤検知クラスを個別に潰すモグラ叩きの構造的終息。
+  suffix 解決 (module 相対 path) と basename 解決 (裸 filename) を解決器に追加
+
 - **`planned:` アンカーマーカー**: 未実装 path の引用を `` `planned:<path>` ``
   で「予定」として申告する記法。確定仕様どおり —
   (1) 消音ではなく可視: pending は「planned, not built yet」として毎回

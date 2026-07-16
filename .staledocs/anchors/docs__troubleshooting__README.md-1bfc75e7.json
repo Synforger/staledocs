@@ -1,0 +1,10 @@
+{
+  "anchors": [
+    ".staledocs/pairs/*.json",
+    "src/**"
+  ],
+  "at": "2026-07-16T09:28:40+00:00",
+  "doc": "docs/troubleshooting/README.md",
+  "note": "v2 anchor baseline armed at migration",
+  "schema": 1
+}

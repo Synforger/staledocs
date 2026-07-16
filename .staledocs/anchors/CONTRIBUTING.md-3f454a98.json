@@ -1,0 +1,9 @@
+{
+  "anchors": [
+    ".github/ISSUE_TEMPLATE/"
+  ],
+  "at": "2026-07-16T09:28:39+00:00",
+  "doc": "CONTRIBUTING.md",
+  "note": "v2 anchor baseline armed at migration",
+  "schema": 1
+}

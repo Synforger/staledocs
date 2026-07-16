@@ -28,36 +28,39 @@
 Glob semantics are CODEOWNERS-flavoured: `*` stays within a path segment,
 `**` crosses segments, a literal directory path matches everything under it.
 
-Anchor resolution notes: a `planned:` prefix (`` `planned:src/future.py` ``)
+Anchor semantics (v2, baseline-resolved): **a token is a claim only after
+an ack proved it resolved.** At every ack the doc's tokens are resolved
+against the repo and the resolving set is recorded as the doc's *anchor
+baseline* (pair docs: inside the pair ack; global/standalone docs:
+`.staledocs/anchors/`, recorded by acking the doc directly). `check` reds
+an anchor only when a **baselined claim stops resolving** — it existed,
+now it does not, which is provable drift. Everything that never resolved
+(prose like `min/max`, flags, quoted history, external names) is *unarmed*:
+counted and listed under `anchor_status` in `--json`, never red, never a
+silent blind spot. A doc with no baseline yet reports `baseline_missing`
+every run until it is acked — unarmed is never mistaken for covered.
+
+Resolution notes: a `planned:` prefix (`` `planned:src/future.py` ``)
 declares a not-built-yet reference — pending markers report as their own
-never-red class every run and are counted in the summary (a declaration,
-not a silencer), and a marker whose path has landed is flagged for removal;
-paths that .gitignore rules would ignore pass (docs
-legitimately describe runtime artifacts); brace shorthand
-(`bridge/{diag,logger}.cjs`) expands shell-style and each member verifies on
-its own — only the missing members are reported (a comma-less `{directive}`
-is not a set and stays literal); markdown-relative references
-(`../<dir>/<page>.md`) resolve against the doc's own directory;
-a package specifier (`@scope/pkg`, subpaths included) is not a repo path —
-it verifies as an identifier against the paired code, which import
-statements quote verbatim (the doc's named dependency must actually be
-used; an unimported or renamed-away package still reds);
-`path::symbol` anchors resolve the file and grep the symbol inside it (a
-gitignored path passes whole); call/assignment/subscript/glob notation falls
-back to the bare identifier (`truncate()`, `viewMode='x'`, `loading[sid]`,
-`system_*`); an identifier missing from its pair but alive elsewhere in the
-repo stays red (a same-named survivor must never soften a rename signal)
-and the finding names the file it lives in — cross-pair reference vs true
-rot is decidable without a manual grep (widen the pair's code, or quote
-the path instead); a slashless glob (`detect-*`) also matches tracked-file
-basenames; a prose slash construction (`min/max` — two all-lowercase words
-around one slash, no extension, head naming no tracked directory) is
-declined rather than judged, and every decline is counted in the report
-and listed under `skipped_tokens` in `--json` (never a silent blind spot;
-a head that IS a tracked dir keeps full verification, so `src/gone` still
-reds); tokens starting with `~`, `/`, or `$`, tokens containing `://`,
-tokens whose digits outnumber their letters, and `<placeholder>` notation
-are not extracted at all.
+never-red class every run and are counted in the summary, and a marker
+whose path has landed is flagged for removal; paths that .gitignore rules
+would ignore pass (docs legitimately describe runtime artifacts); brace
+shorthand (`bridge/{diag,logger}.cjs`) expands shell-style and each member
+is its own claim; a multi-segment token resolves as a **suffix** of any
+tracked path (`core/Foo.ts` inside a module doc), and a dotted bare
+filename (`dsp.h`) resolves by basename; markdown-relative references
+(`../<dir>/<page>.md`) resolve against the doc's own directory; a package
+specifier (`@scope/pkg`) verifies as an identifier against the paired
+code, which import statements quote verbatim; `path::symbol` anchors
+resolve the file and grep the symbol inside it; call/assignment/subscript/
+glob notation falls back to the bare identifier (`truncate()`,
+`viewMode='x'`, `loading[sid]`, `system_*`); an armed identifier missing
+from its pair but alive elsewhere in the repo stays red (a same-named
+survivor must never soften a rename signal) and the finding names the file
+it lives in; a slashless glob (`detect-*`) matches tracked-file basenames;
+tokens starting with `~`, `/`, or `$`, tokens containing `://`, tokens
+whose digits outnumber their letters, and `<placeholder>` notation are not
+extracted at all.
 
 ## Pair states
 
@@ -190,6 +193,12 @@ confirmation.
   "planned": {                          // planned: markers, never red
     "pending":  [ { "doc": "docs/roadmap.md", "line": 8, "token": "src/future.py", "scope": "repo", "planned": "pending" } ],
     "resolved": [ ]                     // landed paths — remove the marker
+  },
+  "anchor_status": {                    // the arming picture, never red
+    "baseline_missing": [ ],            // docs never anchor-acked: nothing gates yet
+    "per_doc": {
+      "docs/auth.md": { "armed": 4, "unarmed": 2, "unarmed_tokens": ["min/max", "@scope/dep"] }
+    }
   },
   "coverage": {
     "unclassified_docs": [], "orphan_pairs": [], "uncovered_source": [],

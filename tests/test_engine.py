@@ -146,7 +146,35 @@ def test_standalone_doc_gitignored_path_passes(paired_repo):
     assert "logs/app.log" not in tokens
 
 
-def test_standalone_doc_dead_path_still_flags(paired_repo):
+def test_standalone_doc_armed_path_flags_when_deleted(paired_repo):
+    _ack_all(paired_repo)
+    paired_repo.write("docs/runbook.md", "# Ops\n\nSee `src/auth/session.py` for details.\n")
+    cfg_path = paired_repo.root / ".staledocs.yaml"
+    cfg_path.write_text(
+        cfg_path.read_text(encoding="utf-8") + "standalone: [docs/runbook.md]\n",
+        encoding="utf-8",
+    )
+    paired_repo.commit("runbook")
+    from staledocs import ledger as ledger_mod
+    from staledocs.config import load as load_cfg
+
+    cfg = load_cfg(paired_repo.root)
+    armed = engine.record_doc_anchors(
+        paired_repo.root, "docs/runbook.md", None, cfg, path_only=True
+    )
+    assert "src/auth/session.py" in armed
+    ledger_mod.write_anchor_baseline(paired_repo.root, "docs/runbook.md", armed)
+    # the armed path resolves -> green
+    result = _check(paired_repo)
+    assert result.anchor_findings == []
+    # the armed path vanishes -> provable drift, red
+    paired_repo.git("rm", "-q", "src/auth/session.py")
+    paired_repo.commit("delete the referenced file")
+    result = _check(paired_repo)
+    assert "src/auth/session.py" in [f.token for f in result.anchor_findings]
+
+
+def test_standalone_doc_never_resolved_path_is_unarmed(paired_repo):
     _ack_all(paired_repo)
     paired_repo.write("docs/runbook.md", "# Ops\n\nSee `src/gone/thing.py` for details.\n")
     cfg_path = paired_repo.root / ".staledocs.yaml"
@@ -156,7 +184,10 @@ def test_standalone_doc_dead_path_still_flags(paired_repo):
     )
     paired_repo.commit("runbook")
     result = _check(paired_repo)
-    assert "src/gone/thing.py" in [f.token for f in result.anchor_findings]
+    assert result.anchor_findings == []
+    status = next(st for st in result.anchor_statuses if st.doc == "docs/runbook.md")
+    assert status.baseline_missing
+    assert "src/gone/thing.py" in status.unarmed_tokens
 
 
 def test_unrelated_churn_downgrades_to_amber(paired_repo):

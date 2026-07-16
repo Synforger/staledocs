@@ -1,0 +1,20 @@
+{
+  "anchors": [
+    "--all",
+    ".staledocs.yaml",
+    ".staledocs/pairs/",
+    "CODE_LAG",
+    "README.ja.md",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
+    "code:",
+    "docs/agent-integration.md",
+    "examples:",
+    "hit_anchors",
+    "src/**"
+  ],
+  "at": "2026-07-16T09:28:39+00:00",
+  "doc": "README.md",
+  "note": "v2 anchor baseline armed at migration",
+  "schema": 1
+}

@@ -66,12 +66,12 @@ finding into one of these buckets; each has exactly one correct move:
 
 | what the finding is | how to tell | the move |
 |---|---|---|
-| real rot | the doc names a file/flag/identifier that genuinely no longer exists | fix the doc (or the code) — this is the tool's payload, don't ignore it away |
-| not-an-identifier quote | git branch names, config-example snippets, tokens for another machine (`~/...`, other-repo paths) | `anchors.ignore` — one entry per token or a glob for a family, with a comment saying what it is |
+| real rot | an **armed** claim (it resolved at ack) no longer resolves | fix the doc (or the code) — this is the tool's payload, don't ignore it away |
+| cross-pair identifier | the finding's hint says `exists in <file>` outside the pair | widen the pair's `code`, or quote the path instead |
 | scope gap | coverage/mapping findings: unclassified doc, uncovered source, pair code outside scope | widen `include`, or declare `standalone`/`global` — never shrink the source scope to silence it |
 | undeclared pair | a doc that clearly owns code but was never paired | add the pair, then two-step ack it |
-| planned reference | a plan/roadmap doc quotes a path or identifier that does not exist *yet* | declare it: `` `planned:src/future.py` `` — pending markers report as their own never-red class every run, and once the path lands the marker is flagged for removal. Fenced code blocks / `anchors.ignore` remain alternatives for whole planned layouts |
-| accurate history | the prose around the red *says* the path was removed ("old X retired", "superseded by Y") | leave the doc alone — it is correct. Read the surrounding text before editing any anchor red; "fixing" these deletes accurate history |
+| unarmed tokens | listed under `anchor_status` in `--json` — prose, flags, history, plans: tokens that never resolved | nothing to do; they never gate. Review the list once at onboarding — a reference that *should* exist but doesn't is pre-existing drift to fix in the doc, a future path can carry a `planned:` marker |
+| planned reference | a not-built-yet path the doc wants watched | declare it: `` `planned:src/future.py` `` — pending markers report as their own never-red class, and a landed path flags the marker for removal |
 
 Rules of thumb while sorting:
 
