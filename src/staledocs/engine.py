@@ -86,9 +86,10 @@ class CheckResult:
     # the marker for removal
     planned_pending: list[AnchorFinding] = field(default_factory=list)
     planned_resolved: list[AnchorFinding] = field(default_factory=list)
-    # tokens verification declined to judge (prose slash constructions) —
-    # the count stays visible so the decline can never hide real rot silently
-    skipped_tokens: list[anchors_mod.SkippedToken] = field(default_factory=list)
+    # per-doc arming picture: armed/unarmed counts + docs whose anchors have
+    # no baseline yet (visible pressure — an unarmed doc is never silently
+    # treated as covered)
+    anchor_statuses: list[anchors_mod.AnchorStatus] = field(default_factory=list)
 
     def red_breakdown(self) -> dict[str, int]:
         """Red counts by finding class — a raw total buries what to fix
@@ -436,59 +437,47 @@ def run_check(repo_root: Path, cfg: Config, mapping: MappingResult) -> CheckResu
     def check_ignored(cands: list[str]) -> set[str]:
         return gitio.ignored_paths(repo_root, cands)
 
-    def _doc_anchors(doc: str, pair_files: list[str] | None) -> None:
+    def _doc_anchors(
+        doc: str, pair_files: list[str] | None, baseline: list[str] | None,
+        path_only: bool = False,
+    ) -> None:
         try:
             text = (repo_root / doc).read_text(encoding="utf-8", errors="ignore")
         except OSError:
             return
         found = anchors_mod.extract(doc, text, cfg.anchors)
+        if path_only:
+            found = [a for a in found if a.path_like or a.planned]
         if not found:
             return
         pair_index = CodeIndex(repo_root, pair_files) if pair_files is not None else None
-        result.anchor_findings.extend(
-            anchors_mod.verify(
-                repo_root,
-                doc,
-                found,
-                pair_index,
-                repo_index,
-                tracked,
-                all_dirs,
-                cfg.anchors.path_roots,
-                check_ignored,
-                cfg.anchors.branch_prefixes,
-                skipped=result.skipped_tokens,
-            )
+        ctx = anchors_mod.ResolveCtx(
+            repo_root=repo_root,
+            pair_index=pair_index,
+            repo_index=repo_index,
+            all_files=tracked,
+            all_dirs=all_dirs,
+            path_roots=cfg.anchors.path_roots,
+            check_ignored=check_ignored,
+            branch_prefixes=cfg.anchors.branch_prefixes,
         )
+        findings, status = anchors_mod.verify(
+            doc, found, set(baseline) if baseline is not None else None, ctx
+        )
+        result.anchor_findings.extend(findings)
+        result.anchor_statuses.append(status)
 
     for pair in mapping.pairs:
-        _doc_anchors(pair.doc, pair.code_files)
+        ack = ledger.read_ack(repo_root, pair.doc)
+        _doc_anchors(pair.doc, pair.code_files, ack.anchors if ack else None)
     for doc in mapping.global_docs:
-        _doc_anchors(doc, None)
+        _doc_anchors(doc, None, ledger.read_anchor_baseline(repo_root, doc))
     for doc in mapping.standalone_docs:
-        # standalone docs have no code side; only path-like anchors apply,
-        # which verify repo-wide inside anchors.verify via the empty index
-        try:
-            text = (repo_root / doc).read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
-        found = [a for a in anchors_mod.extract(doc, text, cfg.anchors) if a.path_like]
-        if found:
-            result.anchor_findings.extend(
-                anchors_mod.verify(
-                    repo_root,
-                    doc,
-                    found,
-                    None,
-                    repo_index,
-                    tracked,
-                    all_dirs,
-                    cfg.anchors.path_roots,
-                    check_ignored,
-                    cfg.anchors.branch_prefixes,
-                    skipped=result.skipped_tokens,
-                )
-            )
+        # standalone docs have no code side; only path claims (and planned
+        # declarations) apply, resolved repo-wide
+        _doc_anchors(
+            doc, None, ledger.read_anchor_baseline(repo_root, doc), path_only=True
+        )
 
     # planned markers travel through verify() with the ordinary anchors,
     # then split into their own never-red streams
@@ -608,7 +597,50 @@ def note_references_evidence(note: str, report: PairReport) -> bool:
     return any(c and c in text for c in candidates)
 
 
-def ack_pair(repo_root: Path, pair: ResolvedPair, note: str = "") -> Path:
+def record_doc_anchors(
+    repo_root: Path,
+    doc: str,
+    pair_files: list[str] | None,
+    cfg: Config,
+    repo_files: list[str] | None = None,
+    path_only: bool = False,
+) -> list[str]:
+    """The doc's provable claims right now — what an ack arms.
+
+    Resolution here must mirror `run_check` exactly (same indexes, same
+    rules) — a claim armed under one resolver and judged under another
+    would red on the discrepancy, not on drift.
+    """
+    try:
+        text = (repo_root / doc).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return []
+    found = anchors_mod.extract(doc, text, cfg.anchors)
+    if path_only:
+        found = [a for a in found if a.path_like]
+    if not found:
+        return []
+    tracked = set(gitio.ls_files(repo_root))
+    ctx = anchors_mod.ResolveCtx(
+        repo_root=repo_root,
+        pair_index=CodeIndex(repo_root, pair_files) if pair_files is not None else None,
+        repo_index=CodeIndex(repo_root, sorted(repo_files or [])),
+        all_files=tracked,
+        all_dirs=anchors_mod.dirs_of(tracked),
+        path_roots=cfg.anchors.path_roots,
+        check_ignored=lambda cands: gitio.ignored_paths(repo_root, cands),
+        branch_prefixes=cfg.anchors.branch_prefixes,
+    )
+    return anchors_mod.record(found, ctx)
+
+
+def ack_pair(
+    repo_root: Path,
+    pair: ResolvedPair,
+    note: str = "",
+    cfg: Config | None = None,
+    repo_files: list[str] | None = None,
+) -> Path:
     doc_blob = gitio.hash_object(repo_root, pair.doc)
     if doc_blob is None:
         raise FileNotFoundError(f"doc not found: {pair.doc}")
@@ -617,6 +649,13 @@ def ack_pair(repo_root: Path, pair: ResolvedPair, note: str = "") -> Path:
         blob = gitio.hash_object(repo_root, rel)
         if blob is not None:
             code_blobs[rel] = blob
+    anchors = (
+        record_doc_anchors(
+            repo_root, pair.doc, pair.code_files, cfg, repo_files=repo_files
+        )
+        if cfg is not None
+        else None
+    )
     return ledger.write_ack(
         repo_root,
         pair.doc,
@@ -624,4 +663,5 @@ def ack_pair(repo_root: Path, pair: ResolvedPair, note: str = "") -> Path:
         doc_blob=doc_blob,
         code_blobs=code_blobs,
         note=note,
+        anchors=anchors,
     )

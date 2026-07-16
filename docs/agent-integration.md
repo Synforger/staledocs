@@ -33,7 +33,7 @@ gate/error, `2` usage, `3` pending confirmation.
 | pair `BROKEN` | both moved separately | reconcile both sides, then ack |
 | pair `AMBER` | both moved together, or nothing the doc names was touched | verify the prose still matches; ack to promote to green (optional — amber never blocks) |
 | pair `UNACKED` | no baseline yet | reconcile once, then ack |
-| anchor finding | doc line quotes a dead identifier/path | fix the quote (rename? removal?) — the line number is exact |
+| anchor finding | an armed claim (it resolved at the last ack) no longer resolves | provable drift: fix the quote (rename? removal?) — the line number is exact, and a `hint` names where a pair-missing identifier still lives |
 | `uncovered_source` | new file has no owning doc | add it to a pair's glob, or write the doc the human asked for |
 | `unclassified_docs` | new doc has no classification | pair it, or declare `standalone`/`global` |
 | config weakening | a check got weaker vs the accepted baseline | never self-accept: surface to the human; acceptance is `ack --config` with a reason |

@@ -58,36 +58,6 @@ class AnchorFinding:
     hint: str = ""
 
 
-@dataclass
-class SkippedToken:
-    """A token verification declined to judge — counted, never silent."""
-
-    doc: str
-    line: int
-    token: str
-    reason: str  # "prose"
-
-
-def _prose_like(token: str, all_dirs: set[str], path_roots: list[str] | None) -> bool:
-    """`min/max`, `try/catch` — an English construction, not a path claim.
-
-    Two all-lowercase words around one slash, no extension, and the head
-    names no tracked directory (directly or under a path root). A head that
-    IS a tracked dir keeps full verification — `src/auth` missing its tail
-    is real rot, not prose.
-    """
-    if token.count("/") != 1:
-        return False
-    head, _, tail = token.partition("/")
-    if not (head.isalpha() and head.islower() and tail.isalpha() and tail.islower()):
-        return False
-    if head in all_dirs:
-        return False
-    return not any(
-        f"{r.strip('/')}/{head}" in all_dirs for r in (path_roots or [])
-    )
-
-
 def _looks_like_code(token: str, min_length: int) -> bool:
     if len(token) < min_length:
         return False
@@ -138,6 +108,7 @@ def _is_path_like(token: str) -> bool:
     if token.startswith("@") and "/" in token:
         return False
     return "/" in token.strip("/") or token.startswith("./")
+
 
 
 def extract(doc: str, text: str, rule: AnchorRule) -> list[Anchor]:
@@ -310,62 +281,174 @@ class CodeIndex:
         return None
 
 
+@dataclass
+class AnchorStatus:
+    """Per-doc arming picture: how much of the doc the baseline covers."""
+
+    doc: str
+    armed: int = 0            # baseline claims still present in the doc
+    unarmed: int = 0          # tokens in the doc that are not claims (yet)
+    baseline_missing: bool = False
+    unarmed_tokens: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ResolveCtx:
+    """Everything resolution needs, shared by record() and verify() so the
+    two can never drift apart."""
+
+    repo_root: Path
+    pair_index: CodeIndex | None
+    repo_index: CodeIndex
+    all_files: set[str]
+    all_dirs: set[str]
+    path_roots: list[str] | None = None
+    check_ignored: Callable[[list[str]], set[str]] | None = None
+    branch_prefixes: list[str] | None = None
+    _suffix_map: dict[str, list[str]] | None = None
+    _basenames: set[str] | None = None
+
+    def suffix_map(self) -> dict[str, list[str]]:
+        if self._suffix_map is None:
+            m: dict[str, list[str]] = {}
+            for f in self.all_files:
+                m.setdefault(f.rsplit("/", 1)[-1], []).append(f)
+            self._suffix_map = m
+        return self._suffix_map
+
+    def basenames(self) -> set[str]:
+        if self._basenames is None:
+            self._basenames = {f.rsplit("/", 1)[-1] for f in self.all_files}
+        return self._basenames
+
+    def ignored(self, token: str, doc_dir: str = "") -> bool:
+        if self.check_ignored is None:
+            return False
+        cands = _path_candidates(token, self.path_roots, doc_dir)
+        return bool(cands) and bool(self.check_ignored(cands))
+
+
+def _suffix_exists(token: str, ctx: ResolveCtx) -> bool:
+    """Docs quote paths relative to their own subtree (`core/Foo.ts` inside a
+    module) — a multi-segment token that is the tail of exactly some tracked
+    path resolves. Same anywhere-match philosophy path anchors already have."""
+    norm = _normalize_path_token(token)
+    if "/" not in norm or any(ch in norm for ch in "*?["):
+        return False
+    base = norm.rsplit("/", 1)[-1]
+    return any(f.endswith("/" + norm) for f in ctx.suffix_map().get(base, ()))
+
+
+def _member_resolves(member: str, doc_dir: str, ctx: ResolveCtx) -> bool:
+    """One path claim (a brace member or a whole path token)."""
+    if _path_exists(member, ctx.all_files, ctx.all_dirs, ctx.path_roots, doc_dir):
+        return True
+    if _suffix_exists(member, ctx):
+        return True
+    return ctx.ignored(member, doc_dir)
+
+
+def _identifier_resolves(token: str, doc_dir: str, ctx: ResolveCtx) -> bool:
+    """One identifier claim: file tree first (a bare filename is a path
+    reference without a slash), then the paired code only — searching the
+    whole repo would let a same-named survivor elsewhere mask a rename."""
+    if _path_exists(token, ctx.all_files, ctx.all_dirs, ctx.path_roots, doc_dir):
+        return True
+    # a dotted slashless token is a filename claim (`Foo.ts`, `README.ja.md`)
+    # when any tracked file carries that basename
+    if "." in token and token in ctx.basenames():
+        return True
+    if any(ch in token for ch in "*?[") and "/" not in token:
+        from . import globs
+
+        if any(globs.matches(token, b) for b in ctx.basenames()):
+            return True
+    index = ctx.pair_index if ctx.pair_index is not None else ctx.repo_index
+    if index.contains(token):
+        return True
+    bare = _bare(token)
+    if bare != token and len(bare) >= 2 and index.contains(bare):
+        return True
+    if "." in bare:
+        tail = bare.rsplit(".", 1)[-1]
+        if len(tail) >= 2 and index.contains(tail):
+            return True
+    return ctx.ignored(token, doc_dir)
+
+
+def _claims(anchor: Anchor, ctx: ResolveCtx) -> list[tuple[str, bool]]:
+    """(claim_key, resolves_now) for one anchor.
+
+    Path tokens expand braces first — each member is its own claim, so a
+    baseline can arm the members that existed and stay silent on the rest.
+    A quoted branch name (`feature/dark-mode`) is never a claim.
+    """
+    token = anchor.token
+    if "::" in token and "." in token.partition("::")[0]:
+        path_part, _, symbol = token.partition("::")
+        if ctx.ignored(path_part, anchor.doc_dir):
+            return [(token, True)]
+        resolved = _resolve_path(
+            path_part, ctx.all_files, ctx.all_dirs, ctx.path_roots, anchor.doc_dir
+        )
+        ok = resolved is not None and (
+            not symbol or CodeIndex(ctx.repo_root, [resolved]).contains(_bare(symbol))
+        )
+        return [(token, ok)]
+    if anchor.path_like:
+        out: list[tuple[str, bool]] = []
+        for member in expand_braces(token):
+            resolves = _member_resolves(member, anchor.doc_dir, ctx)
+            first_seg = member.strip("/").split("/", 1)[0]
+            if not resolves and ctx.branch_prefixes and first_seg in ctx.branch_prefixes:
+                continue  # quoted branch name — not a claim
+            out.append((member, resolves))
+        return out
+    return [(token, _identifier_resolves(token, anchor.doc_dir, ctx))]
+
+
+def record(anchors: list[Anchor], ctx: ResolveCtx) -> list[str]:
+    """The claims that resolve right now — the set an ack arms.
+
+    Only proven claims enter the baseline: a token that does not resolve is
+    prose, a flag, history, or a plan — not a promise the repo ever kept, so
+    it can never red. `planned:` markers are declarations, never baseline.
+    """
+    out: set[str] = set()
+    for anchor in anchors:
+        if anchor.planned:
+            continue
+        for key, ok in _claims(anchor, ctx):
+            if ok:
+                out.add(key)
+    return sorted(out)
+
+
 def verify(
-    repo_root: Path,
     doc: str,
     anchors: list[Anchor],
-    pair_index: CodeIndex | None,
-    repo_index: CodeIndex,
-    all_files: set[str],
-    all_dirs: set[str],
-    path_roots: list[str] | None = None,
-    check_ignored: Callable[[list[str]], set[str]] | None = None,
-    branch_prefixes: list[str] | None = None,
-    skipped: list[SkippedToken] | None = None,
-) -> list[AnchorFinding]:
-    """Findings for anchors that no longer resolve.
+    baseline: set[str] | None,
+    ctx: ResolveCtx,
+) -> tuple[list[AnchorFinding], AnchorStatus]:
+    """Findings for armed claims that no longer resolve.
 
-    - path-like anchors verify against the repo file tree (repo-wide: a doc
-      may legitimately reference paths outside its own pair), with each
-      configured `path_roots` prefix tried too (docs describing a deployed
-      subtree quote paths relative to that subtree's root); a path that
-      .gitignore rules would ignore passes — docs legitimately describe
-      runtime artifacts (logs, local config, caches) that are never tracked
-    - `path::symbol` anchors resolve the path, then grep the symbol inside
-      that one file
-    - identifier anchors first check the file tree (a bare filename like
-      `README.ja.md` is a path reference without a slash), then the paired
-      code only (searching the whole repo would let a same-named survivor
-      elsewhere mask a rename); docs with no pair (global class) fall back
-      to the repo-wide index
-    - a slashless glob (`detect-*`) matches against tracked-file basenames
-      (a name pattern, not a path)
-    - a dotted identifier (`anchors.include_fenced` config notation) passes
-      when its final segment resolves, so doc-side key paths don't need to
-      exist verbatim in code
-    - prose slash constructions (`min/max` — see _prose_like) are declined
-      rather than judged; each decline is recorded in `skipped` so the
-      caller can keep the count visible
+    A claim is armed when the last ack proved it resolved (`baseline`). An
+    armed claim that stops resolving is provable drift — it existed, now it
+    does not. Tokens outside the baseline are unarmed: counted, never red
+    (the count keeps the blind spot visible; the next ack arms whatever
+    resolves by then). `baseline` None = the doc was never anchor-acked —
+    everything is unarmed and the doc reports baseline_missing.
+
+    `planned:` markers bypass the baseline: pending ones report every run,
+    landed ones are flagged for marker removal.
     """
     findings: list[AnchorFinding] = []
-    basenames: set[str] | None = None
-
-    def _ignored(token: str, doc_dir: str = "") -> bool:
-        if check_ignored is None:
-            return False
-        cands = _path_candidates(token, path_roots, doc_dir)
-        return bool(cands) and bool(check_ignored(cands))
+    status = AnchorStatus(doc=doc, baseline_missing=baseline is None)
 
     for anchor in anchors:
         token = anchor.token
         if anchor.planned:
-            # a declared not-built-yet reference: never red, never silent —
-            # pending markers report as their own class every run, and a
-            # marker whose path has landed is flagged so it cannot rot in
-            # place as a stale exemption
-            landed = _path_exists(
-                token, all_files, all_dirs, path_roots, anchor.doc_dir
-            ) or _ignored(token, anchor.doc_dir)
+            landed = _member_resolves(token, anchor.doc_dir, ctx)
             findings.append(
                 AnchorFinding(
                     doc=doc,
@@ -376,93 +459,35 @@ def verify(
                 )
             )
             continue
-        if "::" in token and "." in token.partition("::")[0]:
-            # `path::symbol` (or `file.py::symbol`): resolve the file, then
-            # grep the symbol inside that one file. A gitignored path passes
-            # whole — the file is a runtime artifact we cannot open on CI.
-            path_part, _, symbol = token.partition("::")
-            if _ignored(path_part, anchor.doc_dir):
+        for key, ok in _claims(anchor, ctx):
+            if baseline is None or key not in baseline:
+                status.unarmed += 1
+                status.unarmed_tokens.append(key)
                 continue
-            resolved = _resolve_path(
-                path_part, all_files, all_dirs, path_roots, anchor.doc_dir
-            )
-            if resolved is None or (
-                symbol and not CodeIndex(repo_root, [resolved]).contains(_bare(symbol))
-            ):
-                findings.append(
-                    AnchorFinding(doc=doc, line=anchor.line, token=token, scope="repo")
-                )
-            continue
-        if anchor.path_like:
-            # brace shorthand names several paths in one token — each member
-            # verifies on its own, and only the missing ones are reported
-            for member in expand_braces(token):
-                if _path_exists(
-                    member, all_files, all_dirs, path_roots, anchor.doc_dir
-                ) or _ignored(member, anchor.doc_dir):
-                    continue
-                # a slash token whose first segment is a branch prefix and
-                # which resolves to no tracked path is a quoted branch name,
-                # not a rotted path (`feature/dark-mode`); a real tracked
-                # path with that prefix already passed above
-                first_seg = member.strip("/").split("/", 1)[0]
-                if branch_prefixes and first_seg in branch_prefixes:
-                    continue
-                # prose slash constructions are declined, not judged —
-                # and the decline is counted, never silent
-                if _prose_like(member, all_dirs, path_roots):
-                    if skipped is not None:
-                        skipped.append(
-                            SkippedToken(
-                                doc=doc, line=anchor.line, token=member, reason="prose"
-                            )
+            status.armed += 1
+            if ok:
+                continue
+            scope = "pair" if (ctx.pair_index is not None and not anchor.path_like) else "repo"
+            hint = ""
+            if scope == "pair":
+                # still red — a same-named survivor elsewhere must never
+                # soften a rename signal — but the finding names where the
+                # identifier lives, so cross-pair vs rot is decidable
+                bare = _bare(token)
+                tail = bare.rsplit(".", 1)[-1] if "." in bare else ""
+                for cand in (token, bare if len(bare) >= 2 else "", tail if len(tail) >= 2 else ""):
+                    rel = ctx.repo_index.locate(cand) if cand else None
+                    if rel is not None:
+                        hint = (
+                            f"exists in {rel} — cross-pair reference? widen the "
+                            "pair's code, or quote the path instead"
                         )
-                    continue
-                findings.append(
-                    AnchorFinding(doc=doc, line=anchor.line, token=member, scope="repo")
-                )
-            continue
-        if _path_exists(token, all_files, all_dirs, path_roots, anchor.doc_dir):
-            continue
-        if any(ch in token for ch in "*?[") and "/" not in token:
-            if basenames is None:
-                basenames = {f.rsplit("/", 1)[-1] for f in all_files}
-            from . import globs
-
-            if any(globs.matches(token, b) for b in basenames):
-                continue
-        index = pair_index if pair_index is not None else repo_index
-        scope = "pair" if pair_index is not None else "repo"
-        if index.contains(token):
-            continue
-        bare = _bare(token)
-        if bare != token and len(bare) >= 2 and index.contains(bare):
-            continue
-        tail = ""
-        if "." in bare:
-            tail = bare.rsplit(".", 1)[-1]
-            if len(tail) >= 2 and index.contains(tail):
-                continue
-        if _ignored(token, anchor.doc_dir):
-            continue
-        hint = ""
-        if scope == "pair":
-            # the pair miss stays red (a same-named survivor elsewhere must
-            # never soften a rename signal) but the finding names where the
-            # identifier actually lives, so cross-pair reference vs true
-            # rot is decidable without a manual grep
-            for cand in (token, bare if len(bare) >= 2 else "", tail if len(tail) >= 2 else ""):
-                rel = repo_index.locate(cand) if cand else None
-                if rel is not None:
-                    hint = (
-                        f"exists in {rel} — cross-pair reference? widen the "
-                        "pair's code, or quote the path instead"
-                    )
-                    break
-        findings.append(
-            AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope, hint=hint)
-        )
-    return findings
+                        break
+            findings.append(
+                AnchorFinding(doc=doc, line=anchor.line, token=key, scope=scope, hint=hint)
+            )
+    status.unarmed_tokens = sorted(set(status.unarmed_tokens))
+    return findings, status
 
 
 def _bare(token: str) -> str:
