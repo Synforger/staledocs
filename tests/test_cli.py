@@ -47,7 +47,7 @@ def test_init_scaffolds_config_and_ledger(repo):
 def test_check_json_contract(paired_repo):
     proc = _run(paired_repo.root, "check", "--json")
     payload = json.loads(proc.stdout)
-    assert payload["schema"] == 1
+    assert payload["schema"] == 2
     assert payload["summary"]["red"] >= 1  # unacked pair
     docs = [p["doc"] for p in payload["pairs"]]
     assert docs == ["docs/auth.md"]

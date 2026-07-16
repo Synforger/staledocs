@@ -39,6 +39,11 @@ now it does not, which is provable drift. Everything that never resolved
 counted and listed under `anchor_status` in `--json`, never red, never a
 silent blind spot. A doc with no baseline yet reports `baseline_missing`
 every run until it is acked — unarmed is never mistaken for covered.
+Two boundary notes: a `Staledocs-Ack:` commit trailer advances the pair
+baseline but **not** the anchor baseline — only an explicit `staledocs ack`
+re-records the claims; and resolution sees tracked **plus untracked,
+non-ignored** files, so a claim goes red when its file truly leaves the
+tree, not while it merely moves between index states.
 
 Resolution notes: a `planned:` prefix (`` `planned:src/future.py` ``)
 declares a not-built-yet reference — pending markers report as their own
@@ -155,7 +160,7 @@ confirmation.
 ```jsonc
 {
   "staledocs": "1.2.0",
-  "schema": 1,
+  "schema": 2,                          // 2 = baseline-resolved anchors
   "gate": "warn",
   "summary": {
     "red": 2, "amber": 1, "green": 7,
@@ -229,7 +234,7 @@ One JSON file per pair under `.staledocs/pairs/`, named
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,                          // 2 = baseline-resolved anchors
   "doc": "docs/auth.md",
   "ack": {
     "commit": "abc123…",

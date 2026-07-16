@@ -10,16 +10,16 @@
       "unclassified_docs",
       "uncovered_source"
     ],
-    "at": "2026-07-16T09:28:30+00:00",
+    "at": "2026-07-16T12:44:06+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "09318490e8380f43a781dd9ac78668f7ab60772d",
+      "docs/reference/README.md": "5c5ab2292a88b1151570755c51e63cfb7de3b1c6",
       "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
       "src/staledocs/engine.py": "42251fc2e8f82c772eb49166f2bebb1cbf15c957",
-      "src/staledocs/report.py": "efafbe1e6f450418d5a59cc3f4dc07fab7d82e49"
+      "src/staledocs/report.py": "2872daa981620ff290ca56f43ed8f58b0a0c28f6"
     },
-    "commit": "eefea0b85b1a523d743aa9fbcd6a2d74c36d23dd",
+    "commit": "64a21e94b0ccd7affe47721c3f88a10190babdba",
     "doc_blob": "425642d6e4b0ac3c7c738d186791d08e9ef88258",
-    "note": "docs/agent-integration.md anchor-finding row now describes armed-claim semantics and the hint field"
+    "note": "report.py schema bump to 2 is what agent flows key on; docs/agent-integration.md rows unchanged"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

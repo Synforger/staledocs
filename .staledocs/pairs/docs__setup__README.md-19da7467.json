@@ -10,14 +10,14 @@
       "code:",
       "pairs:"
     ],
-    "at": "2026-07-16T09:28:31+00:00",
+    "at": "2026-07-16T12:44:07+00:00",
     "code_blobs": {
       "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af"
     },
-    "commit": "eefea0b85b1a523d743aa9fbcd6a2d74c36d23dd",
-    "doc_blob": "e22b786fa26a48972def9693ff6b30cdca89e0c0",
-    "note": "docs/setup/README.md triage table rewritten: armed rot / cross-pair / unarmed buckets replacing prose classes"
+    "commit": "64a21e94b0ccd7affe47721c3f88a10190babdba",
+    "doc_blob": "b79fb3fc7a0821fade28815c47c31d9e9ec55aa5",
+    "note": "docs/setup/README.md gains the v2 upgrade section (baseline_missing -> ack --all -> unarmed review)"
   },
   "doc": "docs/setup/README.md",
   "schema": 1
