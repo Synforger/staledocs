@@ -10,16 +10,16 @@
       "unclassified_docs",
       "uncovered_source"
     ],
-    "at": "2026-07-16T09:28:30+00:00",
+    "at": "2026-07-16T12:47:25+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "09318490e8380f43a781dd9ac78668f7ab60772d",
-      "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
+      "docs/reference/README.md": "b801b1a900e2403d0e587232549efc748be7039a",
+      "src/staledocs/cli.py": "7c45b36ff5c148072333e785b2db1e57f0185d88",
       "src/staledocs/engine.py": "42251fc2e8f82c772eb49166f2bebb1cbf15c957",
-      "src/staledocs/report.py": "efafbe1e6f450418d5a59cc3f4dc07fab7d82e49"
+      "src/staledocs/report.py": "7992cb446f4847b431975d10ea2dafbb31371c80"
     },
-    "commit": "eefea0b85b1a523d743aa9fbcd6a2d74c36d23dd",
+    "commit": "ac8580a12b5ff85738246ede21367b97368fa2c8",
     "doc_blob": "425642d6e4b0ac3c7c738d186791d08e9ef88258",
-    "note": "docs/agent-integration.md anchor-finding row now describes armed-claim semantics and the hint field"
+    "note": "cli.py unarmed command is additive; docs/agent-integration.md flow rows unchanged"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

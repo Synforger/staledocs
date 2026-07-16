@@ -47,7 +47,7 @@ def test_init_scaffolds_config_and_ledger(repo):
 def test_check_json_contract(paired_repo):
     proc = _run(paired_repo.root, "check", "--json")
     payload = json.loads(proc.stdout)
-    assert payload["schema"] == 1
+    assert payload["schema"] == 2
     assert payload["summary"]["red"] >= 1  # unacked pair
     docs = [p["doc"] for p in payload["pairs"]]
     assert docs == ["docs/auth.md"]
@@ -644,3 +644,21 @@ def test_v1_ledger_without_anchors_reports_baseline_missing(paired_repo):
     payload = _json.loads(proc.stdout)
     assert "docs/auth.md" in payload["anchor_status"]["baseline_missing"]
     assert payload["anchors"] == []
+
+
+def test_unarmed_command_shortlists_path_shaped_tokens(paired_repo):
+    paired_repo.write(
+        "docs/auth.md",
+        "# Auth\n\nUses `issue_token` from `src/auth/token.py`;"
+        " legacy `src/auth/v1_gateway.py` was never wired; clamp `min/max`.\n",
+    )
+    paired_repo.commit("doc with pre-existing drift")
+    proc = _run(paired_repo.root, "unarmed")
+    assert "docs/auth.md:3 `src/auth/v1_gateway.py`" in proc.stdout
+    assert "min/max" not in proc.stdout
+    proc = _run(paired_repo.root, "unarmed", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["review"][0]["token"] == "src/auth/v1_gateway.py"
+    # check output points at the shortlist
+    human = _run(paired_repo.root, "check")
+    assert "`staledocs unarmed` to review" in human.stdout

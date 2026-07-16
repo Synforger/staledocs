@@ -414,6 +414,53 @@ def ack(
 
 
 @main.command()
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+def unarmed(as_json: bool) -> None:
+    """The one-time reconciliation view: unarmed tokens that still look
+    like real path claims.
+
+    A reference that should exist but never resolved is pre-existing
+    drift — it predates the baseline and will never red on its own. This
+    shortlist (extension-bearing or tracked-root tokens only) is what a
+    human reads once after migration; prose, flags, and symbols stay out.
+    Read-only, never gates.
+    """
+    repo_root = _repo_root()
+    cfg = _load_config(repo_root)
+    resolved = _resolve(repo_root, cfg)
+    result = engine.run_check(repo_root, cfg, resolved)
+
+    reviews = [(st.doc, f) for st in result.anchor_statuses for f in st.review]
+    other = sum(st.unarmed for st in result.anchor_statuses) - len(reviews)
+    if as_json:
+        import json as _json
+
+        payload = {
+            "schema": 1,
+            "review": [
+                {"doc": f.doc, "line": f.line, "token": f.token} for _, f in reviews
+            ],
+            "other_unarmed": other,
+        }
+        click.echo(_json.dumps(payload, indent=2))
+        return
+    if not reviews:
+        click.echo(
+            f"no path-shaped unarmed tokens — nothing to reconcile "
+            f"({other} other unarmed token(s) never gate)"
+        )
+        return
+    for doc, f in reviews:
+        click.echo(f"{doc}:{f.line} `{f.token}`")
+    click.echo(
+        f"{len(reviews)} review candidate(s) — each is a doc reference that "
+        "looks like a path but resolves to nothing: fix the doc, fix the "
+        "code, or leave it if the prose is accurate history. "
+        f"({other} other unarmed token(s) never gate)"
+    )
+
+
+@main.command()
 @click.argument("docs", nargs=-1)
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def explain(docs: tuple[str, ...], as_json: bool) -> None:

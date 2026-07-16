@@ -6,18 +6,19 @@
       ".staledocs.yaml",
       ".staledocs/config-ack.json",
       ".staledocs/pairs/",
+      "anchor_status",
       "anchors.ignore",
       "code:",
       "pairs:"
     ],
-    "at": "2026-07-16T09:28:31+00:00",
+    "at": "2026-07-16T12:47:26+00:00",
     "code_blobs": {
-      "src/staledocs/cli.py": "233f41bb2ed1f4a3f26bfefea51d3caee8241c18",
+      "src/staledocs/cli.py": "7c45b36ff5c148072333e785b2db1e57f0185d88",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af"
     },
-    "commit": "eefea0b85b1a523d743aa9fbcd6a2d74c36d23dd",
-    "doc_blob": "e22b786fa26a48972def9693ff6b30cdca89e0c0",
-    "note": "docs/setup/README.md triage table rewritten: armed rot / cross-pair / unarmed buckets replacing prose classes"
+    "commit": "ac8580a12b5ff85738246ede21367b97368fa2c8",
+    "doc_blob": "0dfaefb34250dc451c20ed95a62a2fc923240024",
+    "note": "docs/setup/README.md migration step 2 now routes through the cli.py unarmed shortlist"
   },
   "doc": "docs/setup/README.md",
   "schema": 1

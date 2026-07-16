@@ -138,11 +138,17 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
         )
     armed = sum(st.armed for st in result.anchor_statuses)
     unarmed = sum(st.unarmed for st in result.anchor_statuses)
+    review = sum(len(st.review) for st in result.anchor_statuses)
     if unarmed:
+        shortlist = (
+            f"; {review} look like path claims — `staledocs unarmed` to review"
+            if review
+            else ""
+        )
         lines.append(
             dim(
                 f"[anchors] {armed} armed claim(s), {unarmed} unarmed token(s) "
-                "(unarmed tokens never gate; the next ack arms whatever resolves)"
+                f"(unarmed tokens never gate{shortlist})"
             )
         )
     for f in result.planned_pending:
@@ -226,7 +232,9 @@ def render_evidence(evidence: dict, color: bool | None = None) -> str:
 def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
     payload = {
         "staledocs": __version__,
-        "schema": 1,
+        # 2 = baseline-resolved anchors: skipped_tokens removed, anchor_status
+        # added, anchor reds mean an armed claim stopped resolving
+        "schema": 2,
         "gate": gate,
         "summary": {
             "red": result.red_count(),
@@ -250,6 +258,9 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
                     "armed": st.armed,
                     "unarmed": st.unarmed,
                     "unarmed_tokens": st.unarmed_tokens,
+                    "review_candidates": [
+                        {"line": f.line, "token": f.token} for f in st.review
+                    ],
                 }
                 for st in result.anchor_statuses
                 if st.armed or st.unarmed
