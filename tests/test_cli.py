@@ -565,3 +565,18 @@ def test_planned_marker_never_red_and_counted(paired_repo):
     paired_repo.commit("land the refresh flow")
     human = _run(paired_repo.root, "check")
     assert "remove the planned: marker" in human.stdout
+
+
+def test_prose_skip_surfaces_in_json_and_summary(paired_repo):
+    paired_repo.write(
+        "docs/auth.md",
+        "# Auth\n\nUses `issue_token` from `src/auth/token.py`, clamps `min/max`.\n",
+    )
+    paired_repo.commit("prose token")
+    proc = _run(paired_repo.root, "check", "--json")
+    payload = json.loads(proc.stdout)
+    assert payload["skipped_tokens"] == [
+        {"doc": "docs/auth.md", "line": 3, "token": "min/max", "reason": "prose"}
+    ]
+    human = _run(paired_repo.root, "check")
+    assert "1 prose-like slash token(s) skipped" in human.stdout

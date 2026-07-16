@@ -53,6 +53,36 @@ class AnchorFinding:
     planned: str = ""  # "" (a normal finding) | "pending" | "resolved"
 
 
+@dataclass
+class SkippedToken:
+    """A token verification declined to judge — counted, never silent."""
+
+    doc: str
+    line: int
+    token: str
+    reason: str  # "prose"
+
+
+def _prose_like(token: str, all_dirs: set[str], path_roots: list[str] | None) -> bool:
+    """`min/max`, `try/catch` — an English construction, not a path claim.
+
+    Two all-lowercase words around one slash, no extension, and the head
+    names no tracked directory (directly or under a path root). A head that
+    IS a tracked dir keeps full verification — `src/auth` missing its tail
+    is real rot, not prose.
+    """
+    if token.count("/") != 1:
+        return False
+    head, _, tail = token.partition("/")
+    if not (head.isalpha() and head.islower() and tail.isalpha() and tail.islower()):
+        return False
+    if head in all_dirs:
+        return False
+    return not any(
+        f"{r.strip('/')}/{head}" in all_dirs for r in (path_roots or [])
+    )
+
+
 def _looks_like_code(token: str, min_length: int) -> bool:
     if len(token) < min_length:
         return False
@@ -266,6 +296,7 @@ def verify(
     path_roots: list[str] | None = None,
     check_ignored: Callable[[list[str]], set[str]] | None = None,
     branch_prefixes: list[str] | None = None,
+    skipped: list[SkippedToken] | None = None,
 ) -> list[AnchorFinding]:
     """Findings for anchors that no longer resolve.
 
@@ -287,6 +318,9 @@ def verify(
     - a dotted identifier (`anchors.include_fenced` config notation) passes
       when its final segment resolves, so doc-side key paths don't need to
       exist verbatim in code
+    - prose slash constructions (`min/max` — see _prose_like) are declined
+      rather than judged; each decline is recorded in `skipped` so the
+      caller can keep the count visible
     """
     findings: list[AnchorFinding] = []
     basenames: set[str] | None = None
@@ -348,6 +382,16 @@ def verify(
                 # path with that prefix already passed above
                 first_seg = member.strip("/").split("/", 1)[0]
                 if branch_prefixes and first_seg in branch_prefixes:
+                    continue
+                # prose slash constructions are declined, not judged —
+                # and the decline is counted, never silent
+                if _prose_like(member, all_dirs, path_roots):
+                    if skipped is not None:
+                        skipped.append(
+                            SkippedToken(
+                                doc=doc, line=anchor.line, token=member, reason="prose"
+                            )
+                        )
                     continue
                 findings.append(
                     AnchorFinding(doc=doc, line=anchor.line, token=member, scope="repo")

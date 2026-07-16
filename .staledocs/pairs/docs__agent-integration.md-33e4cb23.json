@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-16T07:56:01+00:00",
+    "at": "2026-07-16T08:10:19+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "05e3c6de4bec0987a3fdc17c5dc94f189249c049",
+      "docs/reference/README.md": "5179855b3bd8d8957971f8f99b5a68d0067a712f",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
-      "src/staledocs/engine.py": "1767c108a137113dec07ca39c83616265e45e723",
-      "src/staledocs/report.py": "06af9bc648977e071fcae5cb3077aaf3cca78f17"
+      "src/staledocs/engine.py": "8bbfaf70913546e63b3d8988f958f1831a8b9430",
+      "src/staledocs/report.py": "2d3656fe1434f34ccfe93698a9c4ecd83cdeeadd"
     },
-    "commit": "56a4e46b85f99e65fad59034b77363a8ecbca778",
+    "commit": "4bcdeab7ada149222da708b67ece39bbb4da8f16",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "report.py planned streams are additive to the JSON the agent flow reads; docs/agent-integration.md flow unchanged"
+    "note": "report.py skipped_tokens is additive JSON; agent-integration flow unchanged"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

@@ -41,7 +41,12 @@ is not a set and stays literal); markdown-relative references
 gitignored path passes whole); call/assignment/subscript/glob notation falls
 back to the bare identifier (`truncate()`, `viewMode='x'`, `loading[sid]`,
 `system_*`); a slashless glob (`detect-*`) also matches tracked-file
-basenames; tokens starting with `~`, `/`, or `$`, tokens containing `://`,
+basenames; a prose slash construction (`min/max` — two all-lowercase words
+around one slash, no extension, head naming no tracked directory) is
+declined rather than judged, and every decline is counted in the report
+and listed under `skipped_tokens` in `--json` (never a silent blind spot;
+a head that IS a tracked dir keeps full verification, so `src/gone` still
+reds); tokens starting with `~`, `/`, or `$`, tokens containing `://`,
 tokens whose digits outnumber their letters, and `<placeholder>` notation
 are not extracted at all.
 

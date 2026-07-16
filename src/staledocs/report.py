@@ -116,6 +116,16 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
                 "docs/setup)"
             )
         )
+    if result.skipped_tokens:
+        # declined, not judged — the count stays visible (see --json for
+        # the tokens) so this can never become a silent blind spot
+        lines.append(
+            dim(
+                f"[anchor] {len(result.skipped_tokens)} prose-like slash "
+                "token(s) skipped as non-path (`min/max` class) — full list "
+                "in --json"
+            )
+        )
     for f in result.planned_pending:
         lines.append(yellow(f"[planned] {f.doc}:{f.line} `{f.token}` planned, not built yet"))
     for f in result.planned_resolved:
@@ -212,6 +222,7 @@ def render_json(result: CheckResult, mapping: MappingResult, gate: str) -> str:
             "pending": [asdict(a) for a in result.planned_pending],
             "resolved": [asdict(a) for a in result.planned_resolved],
         },
+        "skipped_tokens": [asdict(s) for s in result.skipped_tokens],
         "coverage": {
             "unclassified_docs": result.unclassified_docs,
             "orphan_pairs": result.orphan_pairs,
