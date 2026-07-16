@@ -111,6 +111,8 @@ def render_human(result: CheckResult, show_green: bool = False, color: bool | No
 
     for f in result.anchor_findings:
         lines.append(red(f"[anchor] {f.doc}:{f.line} `{f.token}` not found in {f.scope} scope"))
+        if f.hint:
+            lines.append(dim(f"      ({f.hint})"))
     if result.anchor_findings:
         # the map is handed out at the moment of stepping, not buried in docs:
         # a missing anchor is rot, a not-built-yet reference, or prose that

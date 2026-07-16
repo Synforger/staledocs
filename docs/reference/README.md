@@ -45,7 +45,11 @@ used; an unimported or renamed-away package still reds);
 `path::symbol` anchors resolve the file and grep the symbol inside it (a
 gitignored path passes whole); call/assignment/subscript/glob notation falls
 back to the bare identifier (`truncate()`, `viewMode='x'`, `loading[sid]`,
-`system_*`); a slashless glob (`detect-*`) also matches tracked-file
+`system_*`); an identifier missing from its pair but alive elsewhere in the
+repo stays red (a same-named survivor must never soften a rename signal)
+and the finding names the file it lives in — cross-pair reference vs true
+rot is decidable without a manual grep (widen the pair's code, or quote
+the path instead); a slashless glob (`detect-*`) also matches tracked-file
 basenames; a prose slash construction (`min/max` — two all-lowercase words
 around one slash, no extension, head naming no tracked directory) is
 declined rather than judged, and every decline is counted in the report

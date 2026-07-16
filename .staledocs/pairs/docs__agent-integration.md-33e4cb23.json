@@ -1,15 +1,15 @@
 {
   "ack": {
-    "at": "2026-07-16T08:19:58+00:00",
+    "at": "2026-07-16T08:23:32+00:00",
     "code_blobs": {
-      "docs/reference/README.md": "ec2e96dd0d4413a7fff49f0a7e5da9f374a5148e",
+      "docs/reference/README.md": "3ff41c42571504511d2df1b2fc5e82c938a2a650",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/engine.py": "8562b8f2719a75ea062237414cc53f6046692a64",
-      "src/staledocs/report.py": "49f22e112b6e9473f18874a33261390a796cea03"
+      "src/staledocs/report.py": "6e4ed33a74701aa8de9598c7fd5d4922e0de6c01"
     },
-    "commit": "369dfa37f5ded19120a1a9a6791edde4f8f7cec3",
+    "commit": "b7bfe0d56ab8b42521c19399aae053bde476ecf1",
     "doc_blob": "0c5b9629defa16017a5c0ae7df039e887380ea4e",
-    "note": "docs/agent-integration.md fix-flow table unchanged; glob_pair_no_match is additive JSON"
+    "note": "docs/agent-integration.md flow unchanged; anchor finding hint is additive JSON"
   },
   "doc": "docs/agent-integration.md",
   "schema": 1

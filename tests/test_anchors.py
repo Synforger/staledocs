@@ -481,3 +481,30 @@ def test_package_subpath_specifier_greps_verbatim(tmp_path: Path):
         tmp_path, "d.md", found, pair_index, CodeIndex(tmp_path, []), set(), set()
     )
     assert findings == []
+
+
+def test_pair_miss_hint_names_where_the_identifier_lives(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/auth.py").write_text("def open_session():\n    pass\n")
+    (tmp_path / "src/other.py").write_text("def issue_token():\n    pass\n")
+    found = anchors.extract("d.md", "Uses `issue_token` heavily.\n", RULE)
+    pair_index = CodeIndex(tmp_path, ["src/auth.py"])
+    repo_index = CodeIndex(tmp_path, ["src/auth.py", "src/other.py"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, repo_index, set(), set()
+    )
+    # still red — a same-named survivor elsewhere never softens the signal
+    assert [(f.token, f.scope) for f in findings] == [("issue_token", "pair")]
+    assert "exists in src/other.py" in findings[0].hint
+
+
+def test_pair_miss_with_no_survivor_has_no_hint(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/auth.py").write_text("def open_session():\n    pass\n")
+    found = anchors.extract("d.md", "Uses `issue_token` heavily.\n", RULE)
+    pair_index = CodeIndex(tmp_path, ["src/auth.py"])
+    repo_index = CodeIndex(tmp_path, ["src/auth.py"])
+    findings = anchors.verify(
+        tmp_path, "d.md", found, pair_index, repo_index, set(), set()
+    )
+    assert findings[0].hint == ""
