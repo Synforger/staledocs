@@ -1,9 +1,9 @@
 {
   "ack": {
-    "at": "2026-07-16T08:19:58+00:00",
+    "at": "2026-07-16T08:23:33+00:00",
     "code_blobs": {
       "src/staledocs/__init__.py": "b3321e9046af910cd73d98dff59968e593e33b87",
-      "src/staledocs/anchors.py": "7e5d625428edc4b58b03c9d91f8a9f155a0af0b3",
+      "src/staledocs/anchors.py": "8b1010496cec0c4be16968af60d6ffd10cac941b",
       "src/staledocs/cli.py": "a82440816d894534f0b9aa4b5a1129f0679136e0",
       "src/staledocs/config.py": "bf009b2d49b548041ac8692d509c9ed83e5161af",
       "src/staledocs/engine.py": "8562b8f2719a75ea062237414cc53f6046692a64",
@@ -12,12 +12,12 @@
       "src/staledocs/globs.py": "4ae45dc38d4bd229beded3ceec70f0850e46d9aa",
       "src/staledocs/ledger.py": "f5360aab82706c084e2493af4d4497791c486bf2",
       "src/staledocs/mapping.py": "1cbe8595bb1d7bd4567f44da6294cba9fec81a5f",
-      "src/staledocs/report.py": "49f22e112b6e9473f18874a33261390a796cea03",
+      "src/staledocs/report.py": "6e4ed33a74701aa8de9598c7fd5d4922e0de6c01",
       "src/staledocs/suggest.py": "eba6dae500326b6f67bc3e0a2e0f87f4502247de"
     },
-    "commit": "369dfa37f5ded19120a1a9a6791edde4f8f7cec3",
-    "doc_blob": "ec2e96dd0d4413a7fff49f0a7e5da9f374a5148e",
-    "note": "docs/reference/README.md config table gains the pairs[].doc glob row implemented in mapping.py"
+    "commit": "b7bfe0d56ab8b42521c19399aae053bde476ecf1",
+    "doc_blob": "3ff41c42571504511d2df1b2fc5e82c938a2a650",
+    "note": "docs/reference/README.md resolution notes now document the pair-miss elsewhere hint from anchors.py"
   },
   "doc": "docs/reference/README.md",
   "schema": 1

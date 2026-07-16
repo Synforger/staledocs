@@ -51,6 +51,11 @@ class AnchorFinding:
     token: str
     scope: str  # "pair" | "repo"
     planned: str = ""  # "" (a normal finding) | "pending" | "resolved"
+    # pair-scope identifier misses only: where the token actually lives when
+    # the wider repo still has it. The finding stays red — a same-named
+    # survivor elsewhere must never soften a rename signal — but the triage
+    # gets the evidence: cross-pair reference vs true rot at a glance
+    hint: str = ""
 
 
 @dataclass
@@ -290,6 +295,20 @@ class CodeIndex:
     def contains(self, token: str) -> bool:
         return token in self._load()
 
+    def locate(self, token: str) -> str | None:
+        """The first file containing the token — evidence for a hint, so a
+        finding can say where a pair-missing identifier actually lives."""
+        if token not in self._load():
+            return None
+        for rel in self._files:
+            try:
+                text = (self._repo_root / rel).read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if token in text:
+                return rel
+        return None
+
 
 def verify(
     repo_root: Path,
@@ -419,14 +438,29 @@ def verify(
         bare = _bare(token)
         if bare != token and len(bare) >= 2 and index.contains(bare):
             continue
+        tail = ""
         if "." in bare:
             tail = bare.rsplit(".", 1)[-1]
             if len(tail) >= 2 and index.contains(tail):
                 continue
         if _ignored(token, anchor.doc_dir):
             continue
+        hint = ""
+        if scope == "pair":
+            # the pair miss stays red (a same-named survivor elsewhere must
+            # never soften a rename signal) but the finding names where the
+            # identifier actually lives, so cross-pair reference vs true
+            # rot is decidable without a manual grep
+            for cand in (token, bare if len(bare) >= 2 else "", tail if len(tail) >= 2 else ""):
+                rel = repo_index.locate(cand) if cand else None
+                if rel is not None:
+                    hint = (
+                        f"exists in {rel} — cross-pair reference? widen the "
+                        "pair's code, or quote the path instead"
+                    )
+                    break
         findings.append(
-            AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope)
+            AnchorFinding(doc=doc, line=anchor.line, token=token, scope=scope, hint=hint)
         )
     return findings
 
